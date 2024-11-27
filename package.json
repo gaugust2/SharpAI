@@ -1,0 +1,27 @@
+{
+  "name": "sharpai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/khatibog/SharpAI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/khatibog/SharpAI/issues"
+  },
+  "homepage": "https://github.com/khatibog/SharpAI#readme",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "nodemon": "^3.1.7",
+    "openai": "^4.73.1"
+  }
+}
