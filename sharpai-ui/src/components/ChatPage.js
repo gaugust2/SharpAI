@@ -1,7 +1,19 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import chatLogo from '../assets/Frame 1216258384.svg';
+import { jwtDecode } from 'jwt-decode';
+
 
 function ChatPage() {
+    const [userName, setUserName] = useState('');
+
+    useEffect(() => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const decoded = jwtDecode(token);
+        setUserName(decoded.firstName); 
+      }
+    }, []);
+  
   return (
     <div style={styles.container}>
       {/* Sidebar */}
@@ -29,7 +41,7 @@ function ChatPage() {
       <div style={styles.chatWindow}>
         <div style={styles.welcomeContainer}>
           <img src={chatLogo} alt="Chat Logo" style={styles.chatLogo} />
-          <h2 style={styles.welcomeMessage}>Hello, “Insert Name” ✨</h2>
+          <h2 style={styles.welcomeMessage}>Hello, {userName ? userName : 'Guest'}✨</h2>
           <p style={styles.subMessage}>What do you want to bet on today?</p>
         </div>
         <div style={styles.inputContainer}>
