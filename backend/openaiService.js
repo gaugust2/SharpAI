@@ -27,7 +27,7 @@ async function getAnalysis(externalData) {
         const [selectedTeamLast5Games, opposingTeamLast5Games, selectedTeamInjuriesList, opposingTeamInjuriesList, projections] = externalData //Destructuring the array, since we already know the structure
         
         
-
+        return 'Testing.'
     } catch (error) {
         console.error(error);
         throw new Error('Failed to generate analysis:', error);

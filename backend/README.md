@@ -1,4 +1,4 @@
-# SharpAI
+# SharpAI Backend
 
 ## .env file variables
 
