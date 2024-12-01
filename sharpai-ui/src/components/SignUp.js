@@ -114,7 +114,7 @@ function SignUp() {
 
 const styles = {
   container: {
-    backgroundColor: '#0f0f0f',
+    backgroundColor: '#0C111B',
     color: '#ffffff',
     minHeight: '100vh',
     display: 'flex',
@@ -125,7 +125,7 @@ const styles = {
   form: {
     width: '100%',
     maxWidth: '400px',
-    backgroundColor: '#1c1c1c',
+    backgroundColor: '#071730',
     padding: '30px',
     borderRadius: '10px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
@@ -152,8 +152,8 @@ const styles = {
     width: '100%',
     padding: '10px',
     borderRadius: '5px',
-    border: '1px solid #444',
-    backgroundColor: '#333',
+    border: '1px solid #1C2639',
+    backgroundColor: '#1C2639',
     color: '#fff',
     fontSize: '14px',
     outline: 'none',
