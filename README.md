@@ -11,12 +11,12 @@ SPORTS_DATA_API_KEY=""
 
 Make sure your .env file has all necessary variables. Open a terminal and run the command:
 
-npm install
+'''npm install'''
 
 Then run either of the following commands:
 
-npm start
-npm run dev
+'''npm start'''
+'''npm run dev'''
 
 The backend will then be accessible via localhost:3000.
 
