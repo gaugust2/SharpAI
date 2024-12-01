@@ -10,7 +10,7 @@ function SignUp() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert("Passwords don't match");
@@ -20,8 +20,33 @@ function SignUp() {
       alert('You must accept the terms and conditions.');
       return;
     }
-    alert('Sign Up successful!');
-    navigate('/');
+  
+    try {
+      const response = await fetch('http://localhost:3000/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName,
+          email,
+          password,
+          bettingBudget: parseInt(bettingBudget, 10),
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        alert(data.message);
+        localStorage.setItem('token', data.token); // save token locally
+        navigate('/chat'); // go to chat 
+      } else {
+        alert(data.message);
+      }
+    } catch (error) {
+      alert('Something went wrong. Please try again.');
+    }
   };
 
   return (
@@ -129,7 +154,7 @@ const styles = {
     padding: '30px',
     borderRadius: '10px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-    boxSizing: 'border-box', // Ensure padding doesn't affect width
+    boxSizing: 'border-box', 
   },
   header: {
     fontSize: '24px',
@@ -163,7 +188,7 @@ const styles = {
     fontSize: '12px',
     color: '#888',
     marginTop: '8px',
-    textAlign: 'left', // Ensure alignment is correct
+    textAlign: 'left',
     display: 'block',
   },
   checkboxContainer: {

@@ -1,13 +1,42 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import chatLogo from '../assets/Frame 1216258384.svg';
+import { jwtDecode } from 'jwt-decode';
+
 
 function ChatPage() {
+    const [userName, setUserName] = useState('');
+    const navigate = useNavigate();
+
+    useEffect(() => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const decoded = jwtDecode(token);
+          setUserName(decoded.firstName); // get users name to show laterr
+        } catch (error) {
+          console.error('Invalid token:', error);
+          handleLogout(); //expired session log em out
+        }
+      } else {
+        handleLogout(); // no token log them out
+      }
+    }, []);
+  
+    const handleLogout = () => {
+      localStorage.removeItem('token'); 
+      navigate('/'); 
+    };
+  
   return (
     <div style={styles.container}>
       {/* Sidebar */}
       <div style={styles.sidebar}>
         <h1 style={styles.title}>SharpAI</h1>
         <button style={styles.newChatButton}>+ New Chat</button>
+        <button onClick={handleLogout} style={styles.logoutButton}>
+            Logout
+          </button>
         <div style={styles.recentChats}>
           <h2 style={styles.recentTitle}>Recent</h2>
           <div style={styles.chatItem}>
@@ -29,7 +58,7 @@ function ChatPage() {
       <div style={styles.chatWindow}>
         <div style={styles.welcomeContainer}>
           <img src={chatLogo} alt="Chat Logo" style={styles.chatLogo} />
-          <h2 style={styles.welcomeMessage}>Hello, “Insert Name” ✨</h2>
+          <h2 style={styles.welcomeMessage}>Hello, {userName ? userName : 'Guest'}✨</h2>
           <p style={styles.subMessage}>What do you want to bet on today?</p>
         </div>
         <div style={styles.inputContainer}>
@@ -70,6 +99,17 @@ const styles = {
   newChatButton: {
     backgroundColor: '#0066ff',
     color: '#ffffff',
+    padding: '10px 20px',
+    borderRadius: '5px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    marginBottom: '30px',
+  },
+  logoutButton: {
+    backgroundColor: '#ffffff',
+    color: '#0066ff',
     padding: '10px 20px',
     borderRadius: '5px',
     border: 'none',
