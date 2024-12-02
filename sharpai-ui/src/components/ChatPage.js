@@ -3,54 +3,58 @@ import { useNavigate } from 'react-router-dom';
 import chatLogo from '../assets/Frame 1216258384.svg';
 import { jwtDecode } from 'jwt-decode';
 
-
 function ChatPage() {
-    const [userName, setUserName] = useState('');
-    const navigate = useNavigate();
+  const [userName, setUserName] = useState('');
+  const navigate = useNavigate();
 
-    useEffect(() => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const decoded = jwtDecode(token);
-          setUserName(decoded.firstName); // get users name to show laterr
-        } catch (error) {
-          console.error('Invalid token:', error);
-          handleLogout(); //expired session log em out
-        }
-      } else {
-        handleLogout(); // no token log them out
+  const recentItems = [
+    'Toronto Raptors to Win',
+    'Lorem ipsum dolor sit amet',
+    'Utah Jazz to Win',
+  ];
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUserName(decoded.firstName);
+      } catch (error) {
+        console.error('Invalid token:', error);
+        handleLogout();
       }
-    }, []);
-  
-    const handleLogout = () => {
-      localStorage.removeItem('token'); 
-      navigate('/'); 
-    };
-  
+    } else {
+      handleLogout();
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+  };
+
   return (
     <div style={styles.container}>
       {/* Sidebar */}
       <div style={styles.sidebar}>
         <h1 style={styles.title}>SharpAI</h1>
-        <button style={styles.newChatButton}>+ New Chat</button>
+        <button style={styles.newChatButton} onClick={() => navigate('/chat')}>
+          + New Chat
+        </button>
+        <button style={styles.newChatButton} onClick={() => navigate('/betting')}>
+          Betting Slip
+        </button>
         <button onClick={handleLogout} style={styles.logoutButton}>
-            Logout
-          </button>
+          Logout
+        </button>
         <div style={styles.recentChats}>
           <h2 style={styles.recentTitle}>Recent</h2>
-          <div style={styles.chatItem}>
-            <div style={styles.chatIcon}>📄</div>
-            <span style={styles.chatText}>Toronto Raptors to Win</span>
-          </div>
-          <div style={styles.chatItem}>
-            <div style={styles.chatIcon}>📄</div>
-            <span style={styles.chatText}>Lorem ipsum dolor sit amet</span>
-          </div>
-          <div style={styles.chatItem}>
-            <div style={styles.chatIcon}>📄</div>
-            <span style={styles.chatText}>Lorem ipsum dolor sit amet</span>
-          </div>
+          {recentItems.map((item, index) => (
+            <div key={index} style={styles.chatItem}>
+              <div style={styles.chatIcon}>📄</div>
+              <span style={styles.chatText}>{item}</span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -105,7 +109,7 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 'bold',
-    marginBottom: '30px',
+    marginBottom: '20px',
   },
   logoutButton: {
     backgroundColor: '#ffffff',
@@ -116,29 +120,7 @@ const styles = {
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: 'bold',
-    marginBottom: '30px',
-  },
-  recentChats: {
-    marginTop: '20px',
-  },
-  recentTitle: {
-    fontSize: '16px',
-    marginBottom: '10px',
-    color: '#bbbbbb',
-  },
-  chatItem: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '10px 0',
-    cursor: 'pointer',
-  },
-  chatIcon: {
-    marginRight: '10px',
-    fontSize: '18px',
-  },
-  chatText: {
-    fontSize: '14px',
-    color: '#ffffff',
+    marginTop: 'auto',
   },
   chatWindow: {
     flex: 1,
@@ -154,7 +136,8 @@ const styles = {
     marginBottom: 'auto',
   },
   chatLogo: {
-    fontSize: '48px',
+    width: '200px',
+    height: '200px',
     marginBottom: '20px',
   },
   welcomeMessage: {
@@ -164,6 +147,31 @@ const styles = {
   subMessage: {
     fontSize: '24px',
     color: '#bbbbbb',
+  },
+  recentChats: {
+    marginTop: '20px',
+    width: '100%',
+  },
+  recentTitle: {
+    fontSize: '16px',
+    marginBottom: '10px',
+    color: '#bbbbbb',
+  },
+  chatItem: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 0',
+    cursor: 'pointer',
+    borderBottom: '1px solid #1C2639',
+  },
+  chatIcon: {
+    marginRight: '10px',
+    fontSize: '18px',
+    color: '#ffffff',
+  },
+  chatText: {
+    fontSize: '14px',
+    color: '#ffffff',
   },
   inputContainer: {
     width: '100%',
@@ -205,11 +213,6 @@ const styles = {
     border: 'none',
     padding: '10px',
     cursor: 'pointer',
-  },
-  chatLogo: {
-    width: '200px', 
-    height: '200px', 
-    marginBottom: '20px',
   },
 };
 
