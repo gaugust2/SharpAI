@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 function BettingPage() {
   const navigate = useNavigate();
 
-  // State for form data
   const [formData, setFormData] = useState({
     league: 'NBA',
     selectedTeamCity: '',
@@ -17,23 +16,35 @@ function BettingPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // Dummy recent items for the sidebar
+  // Updated recent items structure
   const recentItems = [
-    'Toronto Raptors to Win',
-    'Lorem ipsum dolor sit amet',
-    'Utah Jazz to Win',
+    {
+      league: 'NBA',
+      match: 'Toronto Raptors vs Boston Celtics',
+      bet: 'Toronto Raptors to Win',
+      date: '2024-12-01',
+    },
+    {
+      league: 'NFL',
+      match: 'New England Patriots vs Miami Dolphins',
+      bet: 'Miami Dolphins to Win',
+      date: '2024-12-03',
+    },
+    {
+      league: 'MLB',
+      match: 'New York Yankees vs Boston Red Sox',
+      bet: 'New York Yankees to Win',
+      date: '2024-12-05',
+    },
   ];
 
-  // Handle form input changes
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Basic validation
     const dateRegex = /^\d{4}\/\d{2}\/\d{2}$|^\d{2}\/\d{2}\/\d{4}$|^\d{2}-\d{2}-\d{4}$|^\w+\s\d{1,2}\s\d{4}$/;
     if (!dateRegex.test(formData.date)) {
       setMessage({ type: 'error', text: 'Invalid date format. Use formats like 2024/10/22 or October 22 2024.' });
@@ -86,29 +97,26 @@ function BettingPage() {
       {/* Sidebar */}
       <div style={styles.sidebar}>
         <h1 style={styles.title}>SharpAI</h1>
-        <button
-          style={styles.newChatButton}
-          onClick={() => navigate('/chat')}
-        >
+        <button style={styles.newChatButton} onClick={() => navigate('/chat')}>
           + New Chat
         </button>
-        <button
-          style={styles.newChatButton}
-          onClick={() => navigate('/betting')}
-        >
+        <button style={styles.newChatButton} onClick={() => navigate('/betting')}>
           Betting Slip
+        </button>
+        <button style={styles.newChatButton} onClick={() => navigate('/settings')}>
+          Settings
         </button>
         <button onClick={handleLogout} style={styles.logoutButton}>
           Logout
         </button>
-
-        {/* Recent Items */}
         <div style={styles.recentChats}>
-          <h2 style={styles.recentTitle}>Recent</h2>
+          <h2 style={styles.recentTitle}>Recent Bets</h2>
           {recentItems.map((item, index) => (
             <div key={index} style={styles.chatItem}>
-              <div style={styles.chatIcon}>📄</div>
-              <span style={styles.chatText}>{item}</span>
+              <h3 style={styles.recentItemLeague}>{item.league}</h3>
+              <p style={styles.recentItemMatch}>{item.match}</p>
+              <p style={styles.recentItemBet}>{item.bet}</p>
+              <p style={styles.recentItemDate}>Date: {item.date}</p>
             </div>
           ))}
         </div>
@@ -118,8 +126,8 @@ function BettingPage() {
       <div style={styles.mainContent}>
         <h2 style={styles.header}>Betting Slip</h2>
         <form onSubmit={handleSubmit} style={styles.form}>
-          <label>
-            League:
+          <div style={styles.fieldContainer}>
+            <label style={styles.label}>League:</label>
             <select
               name="league"
               value={formData.league}
@@ -131,9 +139,9 @@ function BettingPage() {
               <option value="NFL">NFL</option>
               <option value="MLB">MLB</option>
             </select>
-          </label>
-          <label>
-            Selected Team City:
+          </div>
+          <div style={styles.fieldContainer}>
+            <label style={styles.label}>Selected Team City:</label>
             <input
               type="text"
               name="selectedTeamCity"
@@ -143,9 +151,9 @@ function BettingPage() {
               style={styles.input}
               disabled={loading}
             />
-          </label>
-          <label>
-            Selected Team Name:
+          </div>
+          <div style={styles.fieldContainer}>
+            <label style={styles.label}>Selected Team Name:</label>
             <input
               type="text"
               name="selectedTeamName"
@@ -155,9 +163,9 @@ function BettingPage() {
               style={styles.input}
               disabled={loading}
             />
-          </label>
-          <label>
-            Opposing Team City:
+          </div>
+          <div style={styles.fieldContainer}>
+            <label style={styles.label}>Opposing Team City:</label>
             <input
               type="text"
               name="opposingTeamCity"
@@ -167,9 +175,9 @@ function BettingPage() {
               style={styles.input}
               disabled={loading}
             />
-          </label>
-          <label>
-            Opposing Team Name:
+          </div>
+          <div style={styles.fieldContainer}>
+            <label style={styles.label}>Opposing Team Name:</label>
             <input
               type="text"
               name="opposingTeamName"
@@ -179,9 +187,9 @@ function BettingPage() {
               style={styles.input}
               disabled={loading}
             />
-          </label>
-          <label>
-            Date:
+          </div>
+          <div style={styles.fieldContainer}>
+            <label style={styles.label}>Date:</label>
             <input
               type="text"
               name="date"
@@ -191,8 +199,8 @@ function BettingPage() {
               style={styles.input}
               disabled={loading}
             />
-          </label>
-          <button type="submit" style={styles.submitButton} disabled={loading}>
+          </div>
+          <button type="submit" style={styles.button} disabled={loading}>
             {loading ? 'Submitting...' : 'Submit Bet'}
           </button>
         </form>
@@ -254,18 +262,28 @@ const styles = {
     color: '#bbbbbb',
   },
   chatItem: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '10px 0',
-    cursor: 'pointer',
+    marginBottom: '15px',
+    padding: '10px',
+    backgroundColor: '#1C2639',
+    borderRadius: '5px',
   },
-  chatIcon: {
-    marginRight: '10px',
-    fontSize: '18px',
-  },
-  chatText: {
+  recentItemLeague: {
     fontSize: '14px',
+    fontWeight: 'bold',
     color: '#ffffff',
+    marginBottom: '5px',
+  },
+  recentItemMatch: {
+    fontSize: '14px',
+    color: '#bbbbbb',
+  },
+  recentItemBet: {
+    fontSize: '14px',
+    color: '#bbbbbb',
+  },
+  recentItemDate: {
+    fontSize: '12px',
+    color: '#888888',
   },
   mainContent: {
     flex: 1,
@@ -273,27 +291,33 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0C111B',
   },
   header: {
     fontSize: '32px',
     marginBottom: '20px',
   },
-  form: {
+  fieldContainer: {
+    marginBottom: '15px',
     display: 'flex',
     flexDirection: 'column',
     width: '100%',
     maxWidth: '400px',
   },
+  label: {
+    fontSize: '14px',
+    marginBottom: '5px',
+    color: '#bbbbbb',
+  },
   input: {
-    marginBottom: '10px',
     padding: '10px',
     fontSize: '16px',
     borderRadius: '5px',
-    border: '1px solid #ccc',
+    border: '1px solid #1C2639',
+    backgroundColor: '#1C2639',
+    color: '#ffffff',
   },
-  submitButton: {
+  button: {
+    marginTop: '20px',
     backgroundColor: '#0066ff',
     color: '#ffffff',
     padding: '10px',

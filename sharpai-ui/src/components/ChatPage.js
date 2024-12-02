@@ -44,6 +44,9 @@ function ChatPage() {
         <button style={styles.newChatButton} onClick={() => navigate('/betting')}>
           Betting Slip
         </button>
+        <button style={styles.newChatButton} onClick={() => navigate('/settings')}>
+          Settings
+        </button>
         <button onClick={handleLogout} style={styles.logoutButton}>
           Logout
         </button>

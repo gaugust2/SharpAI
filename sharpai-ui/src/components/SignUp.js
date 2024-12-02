@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function SignUp() {
@@ -10,6 +10,12 @@ function SignUp() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Check local storage for ToS acceptance
+    const tosStatus = localStorage.getItem('tosAccepted') === 'true';
+    setTermsAccepted(tosStatus);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
@@ -20,7 +26,7 @@ function SignUp() {
       alert('You must accept the terms and conditions.');
       return;
     }
-  
+
     try {
       const response = await fetch('http://localhost:3000/signup', {
         method: 'POST',
@@ -34,13 +40,14 @@ function SignUp() {
           bettingBudget: parseInt(bettingBudget, 10),
         }),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         alert(data.message);
-        localStorage.setItem('token', data.token); // save token locally
-        navigate('/chat'); // go to chat 
+        localStorage.removeItem('tosAccepted'); // Clear ToS status
+        localStorage.setItem('token', data.token); // Save token locally
+        navigate('/chat'); // Navigate to chat
       } else {
         alert(data.message);
       }
@@ -112,10 +119,14 @@ function SignUp() {
             checked={termsAccepted}
             onChange={(e) => setTermsAccepted(e.target.checked)}
             style={styles.checkbox}
+            readOnly
           />
           <span style={styles.checkboxText}>
             I accept SharpAI{' '}
-            <a href="/" style={styles.link}>
+            <a
+              onClick={() => navigate('/terms')}
+              style={styles.link}
+            >
               Terms & Conditions
             </a>
           </span>
@@ -154,7 +165,7 @@ const styles = {
     padding: '30px',
     borderRadius: '10px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-    boxSizing: 'border-box', 
+    boxSizing: 'border-box',
   },
   header: {
     fontSize: '24px',
@@ -209,6 +220,7 @@ const styles = {
     color: '#4da6ff',
     textDecoration: 'none',
     fontWeight: 'bold',
+    cursor: 'pointer',
   },
   button: {
     width: '100%',
@@ -233,5 +245,6 @@ const styles = {
     fontWeight: 'bold',
   },
 };
+  
 
 export default SignUp;
