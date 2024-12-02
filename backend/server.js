@@ -47,20 +47,28 @@ app.post('/betslip', async (req, res) => {
         const externalData = await sportsDataIOController(betslip);
         //externalData is an array of the following: [selectedTeamLast5Games, opposingTeamLast5Games, selectedTeamInjuriesList, opposingTeamInjuriesList, projections]
         //They are all JSON objects that we will use to inform our analysis
-        const analysis = await getAnalysis(externalData);
         
-        res.send(externalData)
-        //res.json({ analysis });
+        const analysis = await getAnalysis(betslip, externalData);
+        /*analysis is an object with the following structure:
+        {
+            "selectedTeamLast5Games": "",
+            "opposingTeamLast5Games": "",
+            "selectedTeamInjuries": "",
+            "opposingTeamInjuries": "",
+            "projections": "",
+            "conclusion": ""
+        }
+        
+        These sections are not final. We can add, remove, or modify these as needed.*/
+
+        res.json(analysis)
     } catch (error) {
         console.error(error.message);
         res.status(404).send(error.message);
     }
 });
 
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('MongoDB connected!'))
     .catch((err) => console.log(err));
   
