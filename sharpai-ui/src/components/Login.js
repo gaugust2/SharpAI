@@ -1,68 +1,94 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     try {
-      const response = await fetch('http://localhost:3000/login', {
-        method: 'POST',
+      const response = await fetch("http://localhost:3000/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
       });
-  
+
       const data = await response.json();
-  
+
       if (response.ok) {
         alert(data.message);
-        localStorage.setItem('token', data.token); // Save token to localStorage
-        navigate('/chat');
+        localStorage.setItem("token", data.token); // Save token to localStorage
+        navigate("/chat");
       } else {
         alert(data.message);
       }
     } catch (error) {
-      alert('Something went wrong. Please try again.');
+      alert("Something went wrong. Please try again.");
     }
   };
 
   return (
-    <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <h2 style={styles.header}>Login to SharpAI</h2>
-        <div style={styles.fieldContainer}>
-          <label style={styles.label}>Email*</label>
+    <div
+      className="d-flex justify-content-center align-items-center min-vh-100 bg-dark text-light p-3"
+      style={styles.container}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className="w-100 p-4 bg-secondary rounded shadow"
+        style={styles.form}
+      >
+        <h2 className="text-center mb-4" style={styles.header}>
+          Login to SharpAI
+        </h2>
+
+        <div className="mb-3">
+          <label htmlFor="email" className="form-label" style={styles.label}>
+            Email*
+          </label>
           <input
             type="email"
+            id="email"
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="form-control"
             style={styles.input}
           />
         </div>
-        <div style={styles.fieldContainer}>
-          <label style={styles.label}>Password*</label>
+
+        <div className="mb-3">
+          <label htmlFor="password" className="form-label" style={styles.label}>
+            Password*
+          </label>
           <input
             type="password"
+            id="password"
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="form-control"
             style={styles.input}
           />
         </div>
-        <button type="submit" style={styles.button}>
+
+        <button
+          type="submit"
+          className="btn btn-primary w-100"
+          style={styles.button}
+        >
           Login
         </button>
-        <div style={styles.footer}>
-          Don't have an account?{' '}
+
+        <div className="mt-3 text-center" style={styles.footer}>
+          Don't have an account?{" "}
           <span
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate("/signup")}
+            className="text-primary fw-bold"
             style={styles.signUpLink}
           >
             Sign Up
@@ -75,72 +101,38 @@ function Login() {
 
 const styles = {
   container: {
-    backgroundColor: '#0C111B',
-    color: '#ffffff',
-    minHeight: '100vh',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: '20px',
+    backgroundColor: "#0C111B",
+    color: "#ffffff",
   },
   form: {
-    width: '100%',
-    maxWidth: '400px',
-    backgroundColor: '#071730',
-    padding: '30px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-    boxSizing: 'border-box', // Ensure padding doesn't affect width
+    maxWidth: "400px",
+    backgroundColor: "#071730",
+    borderRadius: "10px",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
   },
   header: {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    marginBottom: '20px',
-    textAlign: 'center',
-  },
-  fieldContainer: {
-    marginBottom: '20px',
+    fontSize: "24px",
+    fontWeight: "bold",
   },
   label: {
-    display: 'block',
-    fontSize: '14px',
-    marginBottom: '8px',
-    fontWeight: 'bold',
-    color: '#bbbbbb',
-    textAlign: 'left',
+    color: "#bbbbbb",
+    fontWeight: "bold",
   },
   input: {
-    width: '100%',
-    padding: '10px',
-    borderRadius: '5px',
-    border: '1px solid #1C2639',
-    backgroundColor: '#1C2639',
-    color: '#fff',
-    fontSize: '14px',
-    outline: 'none',
-    boxSizing: 'border-box',
+    backgroundColor: "#1C2639",
+    color: "#fff",
+    border: "1px solid #1C2639",
   },
   button: {
-    width: '100%',
-    padding: '12px',
-    border: 'none',
-    borderRadius: '5px',
-    backgroundColor: '#0066ff',
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: '16px',
-    cursor: 'pointer',
+    backgroundColor: "#0066ff",
+    fontWeight: "bold",
   },
   footer: {
-    marginTop: '20px',
-    textAlign: 'center',
-    fontSize: '14px',
-    color: '#bbbbbb',
+    color: "#bbbbbb",
   },
   signUpLink: {
-    color: '#4da6ff',
-    cursor: 'pointer',
-    fontWeight: 'bold',
+    cursor: "pointer",
+    color: "#4da6ff",
   },
 };
 
