@@ -1,6 +1,6 @@
 const axios = require('axios')
 const config = require('./config')
-const { gameFieldsToRemove, playerFieldsToRemove, selectedGameFieldsToRemove } = require('./fieldsToRemove')
+const { gameFieldsToRemove, playerFieldsToRemove, projectionsFieldsToRemove } = require('./fieldsToRemove')
 
 const { nflEndpoints,
     nbaEndpoints,
@@ -155,7 +155,7 @@ async function sportsDataIOController(betslip){
             }
         });
 
-        selectedGameFieldsToRemove.forEach(field => delete projections.data[field]);
+        projectionsFieldsToRemove.forEach(field => delete projections.data[field]);
         //The BAKER game projections will inform the analysis of the expected winner
 
         return [selectedTeamLast5Games.data, opposingTeamLast5Games.data, selectedTeamInjuries, opposingTeamInjuries, projections.data]
