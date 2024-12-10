@@ -1,12 +1,12 @@
 const express = require("express");
 const app = express();
-app.use(express.json());
 const axios = require("axios");
 const config = require("./config");
 const { getAnalysis } = require("./openaiService");
 const { sportsDataIOController } = require("./sportsDataIOService");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path");
 app.use(cors());
 const bodyParser = require("body-parser");
 app.use(bodyParser.json());
@@ -15,45 +15,16 @@ const jwt = require("jsonwebtoken");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-app.get("/", async (req, res) => {
-  res.send("Hello World!");
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, "build")));
+
+// Handle any unknown routes (React routes)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
-app.post("/betslip", async (req, res) => {
-  try {
-    const betslip = req.body;
-    /* Bet slip should have the following structure:
-        {
-            "league": "NBA",
-            "selectedTeam": {
-                "city": "Dallas",
-                "name": "Mavericks"
-            },
-            "opposingTeam": {
-                "city": "Utah",
-                "name": "Jazz"
-            },
-            "date": "November 30 2024"
-        }
-
-        Below are acceptable date formats from the user. Anything else will result in an error.
-        October 22 2024
-        10/22/2024
-        10-22-2024
-        2024/10/22
-        */
-
-    const externalData = await sportsDataIOController(betslip);
-    //externalData is an array of the following: [selectedTeamLast5Games, opposingTeamLast5Games, selectedTeamInjuriesList, opposingTeamInjuriesList, projections]
-    //They are all JSON objects that we will use to inform our analysis
-    const analysis = await getAnalysis(externalData);
-
-    res.send(externalData);
-    //res.json({ analysis });
-  } catch (error) {
-    console.error(error.message);
-    res.status(404).send(error.message);
-  }
+app.get("/", async (req, res) => {
+  res.send("Hello World!");
 });
 
 mongoose
@@ -143,6 +114,89 @@ app.post("/login", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Error logging in" });
+  }
+});
+
+app.post("/betslip", async (req, res) => {
+  try {
+    // Step 1: Extract token from the Authorization header
+    const token = req.headers["authorization"]?.split(" ")[1]; // "Bearer token"
+
+    if (!token) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    // Step 2: Verify the token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET); // Ensure JWT_SECRET matches
+    } catch (err) {
+      console.error("Token verification failed:", err.message);
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    // Step 3: Attach the decoded token payload to the request (optional)
+    req.user = decoded;
+
+    // Step 4: Validate incoming betslip data
+    const { league, selectedTeam, opposingTeam, date } = req.body;
+    if (!league || !selectedTeam || !opposingTeam || !date) {
+      return res
+        .status(400)
+        .json({ message: "Missing required fields in betslip" });
+    }
+
+    if (
+      !selectedTeam.city ||
+      !selectedTeam.name ||
+      !opposingTeam.city ||
+      !opposingTeam.name
+    ) {
+      return res.status(400).json({
+        message: "Selected team or opposing team is missing city or name.",
+      });
+    }
+
+    console.log("Received betslip:", {
+      league,
+      selectedTeam,
+      opposingTeam,
+      date,
+    });
+
+    // Step 5: Call sportsDataIOController to process the betslip
+    const externalData = await sportsDataIOController({
+      league,
+      selectedTeam,
+      opposingTeam,
+      date,
+    });
+
+    if (!Array.isArray(externalData) || externalData.length !== 5) {
+      return res.status(500).json({
+        message: "Expected externalData to be an array with 5 elements.",
+      });
+    }
+
+    // Step 6: Perform analysis with the external data
+    const analysis = await getAnalysis(
+      { selectedTeam, opposingTeam },
+      externalData
+    );
+
+    if (!analysis) {
+      return res.status(500).json({ message: "Failed to generate analysis" });
+    }
+
+    console.log("Analysis generated:", analysis);
+
+    // Step 7: Respond with the analysis result
+    res.json({ analysis });
+  } catch (error) {
+    console.error("Error in /betslip:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to process betslip: ${error.message}` });
   }
 });
 

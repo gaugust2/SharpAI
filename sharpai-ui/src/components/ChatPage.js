@@ -5,6 +5,13 @@ import { jwtDecode } from "jwt-decode";
 
 function ChatPage() {
   const [userName, setUserName] = useState("");
+  const [league, setLeague] = useState("");
+  const [selectedTeamCity, setSelectedTeamCity] = useState("");
+  const [selectedTeamName, setSelectedTeamName] = useState("");
+  const [opposingTeamCity, setOpposingTeamCity] = useState("");
+  const [opposingTeamName, setOpposingTeamName] = useState("");
+  const [date, setDate] = useState("");
+  const [responseMessage, setResponseMessage] = useState(null); // To display server response
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,6 +32,87 @@ function ChatPage() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Prevents default form submission
+
+    // Ensure all fields are populated
+    if (
+      !league ||
+      !selectedTeamCity ||
+      !selectedTeamName ||
+      !opposingTeamCity ||
+      !opposingTeamName ||
+      !date
+    ) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    // Create the betDetails object
+    const betDetails = {
+      league,
+      selectedTeam: { city: selectedTeamCity, name: selectedTeamName },
+      opposingTeam: { city: opposingTeamCity, name: opposingTeamName },
+      date,
+    };
+
+    try {
+      const response = await fetch("http://localhost:3000/betslip", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`, // Send token for authentication
+        },
+        body: JSON.stringify(betDetails),
+      });
+
+      // Check for a successful response from the backend
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 401) {
+          alert("Session expired. Please log in again.");
+          // Redirect to login page if the token is invalid or expired
+          window.location.href = "/login";
+        } else {
+          throw new Error(
+            errorData.message || "Failed to submit the bet slip."
+          );
+        }
+      }
+
+      const data = await response.json();
+      console.log("Response from backend:", data);
+
+      // Update the responseMessage state to display server response
+      setResponseMessage(data.analysis); // Assuming `data.analysis` is the relevant information
+    } catch (error) {
+      console.error("Error submitting bet slip:", error.message);
+      alert(error.message); // Display error message to the user
+    }
+  };
+
+  const formatSectionName = (name) => {
+    let formattedName = name
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2") // Add space before capital letters
+      .replace(/([a-zA-Z])(\d)/g, "$1 $2") // Add space before digits
+      .replace(/^./, (str) => str.toUpperCase()); // Capitalize the first letter
+
+    // Dynamically replace team names if present
+    if (formattedName.includes("Selected Team")) {
+      formattedName = formattedName.replace(
+        "Selected Team",
+        `${selectedTeamCity} ${selectedTeamName}`
+      );
+    } else if (formattedName.includes("Opposing Team")) {
+      formattedName = formattedName.replace(
+        "Opposing Team",
+        `${opposingTeamCity} ${opposingTeamName}`
+      );
+    }
+
+    return formattedName;
   };
 
   return (
@@ -59,28 +147,7 @@ function ChatPage() {
               Toronto Raptors to Win
             </span>
           </div>
-          <div
-            className="d-flex align-items-center p-2"
-            style={styles.chatItem}
-          >
-            <div className="me-2" style={styles.chatIcon}>
-              📄
-            </div>
-            <span className="text-white" style={styles.chatText}>
-              Lorem ipsum dolor sit amet
-            </span>
-          </div>
-          <div
-            className="d-flex align-items-center p-2"
-            style={styles.chatItem}
-          >
-            <div className="me-2" style={styles.chatIcon}>
-              📄
-            </div>
-            <span className="text-white" style={styles.chatText}>
-              Lorem ipsum dolor sit amet
-            </span>
-          </div>
+          {/* ... other recent chat items ... */}
         </div>
       </div>
 
@@ -100,37 +167,77 @@ function ChatPage() {
             Hello, {userName ? userName : "Guest"}✨
           </h2>
           <p className="fs-5" style={styles.subMessage}>
-            What do you want to bet on today?
+            Enter your bet details below:
           </p>
         </div>
-        <div
-          className="w-100 d-flex justify-content-center mt-auto"
-          style={styles.inputContainer}
-        >
-          <div
-            className="d-flex align-items-center w-100 max-w-600 bg-dark rounded-3 p-3"
-            style={styles.inputBar}
-          >
-            <button
-              className="btn btn-link text-muted me-3"
-              style={styles.attachmentButton}
-            >
-              📎
-            </button>
-            <input
-              type="text"
-              placeholder="Type your message..."
-              className="form-control text-white bg-transparent border-0 fs-5"
-              style={styles.input}
-            />
-            <button
-              className="btn btn-primary rounded-circle ms-3"
-              style={styles.sendButton}
-            >
-              ➤
-            </button>
+        <form onSubmit={handleSubmit} className="w-100 d-flex flex-column">
+          <input
+            type="text"
+            placeholder="League (e.g., NBA)"
+            value={league}
+            onChange={(e) => setLeague(e.target.value)}
+            className="form-control mb-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Selected Team City (e.g., Dallas)"
+            value={selectedTeamCity}
+            onChange={(e) => setSelectedTeamCity(e.target.value)}
+            className="form-control mb-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Selected Team Name (e.g., Mavericks)"
+            value={selectedTeamName}
+            onChange={(e) => setSelectedTeamName(e.target.value)}
+            className="form-control mb-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Opposing Team City (e.g., Utah)"
+            value={opposingTeamCity}
+            onChange={(e) => setOpposingTeamCity(e.target.value)}
+            className="form-control mb-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Opposing Team Name (e.g., Jazz)"
+            value={opposingTeamName}
+            onChange={(e) => setOpposingTeamName(e.target.value)}
+            className="form-control mb-3"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Date (e.g., November 30 2024 or 10/22/2024)"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="form-control mb-3"
+            required
+          />
+          <button type="submit" className="btn btn-primary">
+            Submit
+          </button>
+        </form>
+
+        {responseMessage && (
+          <div className="mt-3">
+            <h3>Analysis:</h3>
+            <div className="response-text">
+              {/* Render each piece of the response on a new line */}
+              {Object.entries(responseMessage).map(([key, value]) => (
+                <div key={key}>
+                  <strong>{formatSectionName(key)}:</strong>
+                  <p>{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
