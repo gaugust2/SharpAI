@@ -59,8 +59,8 @@ async function getAnalysis(betslip, externalData) {
     ] = externalData;
 
     // Extract team names
-    const selectedTeamName = betslip.selectedTeam.name;
-    const opposingTeamName = betslip.opposingTeam.name;
+    const selectedTeamName = betslip.selectedTeam;
+    const opposingTeamName = betslip.opposingTeam;
 
     // Fetch AI responses based on the team names
     const selectedTeamLast5Games = await getAIResponse(
@@ -75,8 +75,9 @@ async function getAnalysis(betslip, externalData) {
     const opposingTeamInjuries = await getAIResponse(
       prompts.injuriesPrompt(opposingTeamName, opposingTeamInjuriesList)
     );
-    const projections = await getAIResponse(
-      prompts.projectionsPrompt(
+    const projections = Object.keys(projectionsRaw).length === 0 
+    ? "The BAKER projections were not found for this game. Please check later, as they may be available." 
+    : await getAIResponse(prompts.projectionsPrompt(
         selectedTeamName,
         opposingTeamName,
         projectionsRaw
@@ -95,10 +96,10 @@ async function getAnalysis(betslip, externalData) {
 
     // Dynamically generate the object with team names in labels
     return {
-      [`${selectedTeamName} Last 5 Games`]: selectedTeamLast5Games,
-      [`${opposingTeamName} Last 5 Games`]: opposingTeamLast5Games,
-      [`${selectedTeamName} Injuries`]: selectedTeamInjuries,
-      [`${opposingTeamName} Injuries`]: opposingTeamInjuries,
+      [`Summary of ${selectedTeamName.name} Last 5 Games`]: selectedTeamLast5Games,
+      [`Summary of ${opposingTeamName.name} Last 5 Games`]: opposingTeamLast5Games,
+      [`${selectedTeamName.name} Injury Report`]: selectedTeamInjuries,
+      [`${opposingTeamName.name} Injury Report`]: opposingTeamInjuries,
       Projections: projections,
       Conclusion: conclusion,
     };

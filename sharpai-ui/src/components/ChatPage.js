@@ -52,10 +52,10 @@ function ChatPage() {
 
     // Create the betDetails object
     const betDetails = {
-      league,
-      selectedTeam: { city: selectedTeamCity, name: selectedTeamName },
-      opposingTeam: { city: opposingTeamCity, name: opposingTeamName },
-      date,
+      league: league.trim(),
+      selectedTeam: { city: selectedTeamCity.trim(), name: selectedTeamName.trim() },
+      opposingTeam: { city: opposingTeamCity.trim(), name: opposingTeamName.trim() },
+      date: date.trim()
     };
 
     try {
