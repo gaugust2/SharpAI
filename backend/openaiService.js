@@ -96,10 +96,10 @@ async function getAnalysis(betslip, externalData) {
 
     // Dynamically generate the object with team names in labels
     return {
-      [`${selectedTeamName.name} Last 5 Games`]: selectedTeamLast5Games,
-      [`${opposingTeamName.name} Last 5 Games`]: opposingTeamLast5Games,
-      [`${selectedTeamName.name} Injuries`]: selectedTeamInjuries,
-      [`${opposingTeamName.name} Injuries`]: opposingTeamInjuries,
+      [`Summary of ${selectedTeamName.name} Last 5 Games`]: selectedTeamLast5Games,
+      [`Summary of ${opposingTeamName.name} Last 5 Games`]: opposingTeamLast5Games,
+      [`${selectedTeamName.name} Injury Report`]: selectedTeamInjuries,
+      [`${opposingTeamName.name} Injury Report`]: opposingTeamInjuries,
       Projections: projections,
       Conclusion: conclusion,
     };
