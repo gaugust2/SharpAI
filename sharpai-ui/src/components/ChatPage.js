@@ -12,6 +12,7 @@ function ChatPage() {
   const [opposingTeamName, setOpposingTeamName] = useState("");
   const [date, setDate] = useState("");
   const [responseMessage, setResponseMessage] = useState(null); // To display server response
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -35,9 +36,8 @@ function ChatPage() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevents default form submission
+    e.preventDefault();
 
-    // Ensure all fields are populated
     if (
       !league ||
       !selectedTeamCity ||
@@ -50,30 +50,35 @@ function ChatPage() {
       return;
     }
 
-    // Create the betDetails object
     const betDetails = {
       league: league.trim(),
-      selectedTeam: { city: selectedTeamCity.trim(), name: selectedTeamName.trim() },
-      opposingTeam: { city: opposingTeamCity.trim(), name: opposingTeamName.trim() },
-      date: date.trim()
+      selectedTeam: {
+        city: selectedTeamCity.trim(),
+        name: selectedTeamName.trim(),
+      },
+      opposingTeam: {
+        city: opposingTeamCity.trim(),
+        name: opposingTeamName.trim(),
+      },
+      date: date.trim(),
     };
+
+    setLoading(true); // Start loading
 
     try {
       const response = await fetch("http://localhost:3000/betslip", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`, // Send token for authentication
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
         body: JSON.stringify(betDetails),
       });
 
-      // Check for a successful response from the backend
       if (!response.ok) {
         const errorData = await response.json();
         if (response.status === 401) {
           alert("Session expired. Please log in again.");
-          // Redirect to login page if the token is invalid or expired
           window.location.href = "/login";
         } else {
           throw new Error(
@@ -83,13 +88,12 @@ function ChatPage() {
       }
 
       const data = await response.json();
-      console.log("Response from backend:", data);
-
-      // Update the responseMessage state to display server response
-      setResponseMessage(data.analysis); // Assuming `data.analysis` is the relevant information
+      setResponseMessage(data.analysis);
     } catch (error) {
       console.error("Error submitting bet slip:", error.message);
-      alert(error.message); // Display error message to the user
+      alert(error.message);
+    } finally {
+      setLoading(false); // End loading
     }
   };
 
@@ -170,59 +174,69 @@ function ChatPage() {
             Enter your bet details below:
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="w-100 d-flex flex-column">
-          <input
-            type="text"
-            placeholder="League (e.g., NBA)"
-            value={league}
-            onChange={(e) => setLeague(e.target.value)}
-            className="form-control mb-3"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Selected Team City (e.g., Dallas)"
-            value={selectedTeamCity}
-            onChange={(e) => setSelectedTeamCity(e.target.value)}
-            className="form-control mb-3"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Selected Team Name (e.g., Mavericks)"
-            value={selectedTeamName}
-            onChange={(e) => setSelectedTeamName(e.target.value)}
-            className="form-control mb-3"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Opposing Team City (e.g., Utah)"
-            value={opposingTeamCity}
-            onChange={(e) => setOpposingTeamCity(e.target.value)}
-            className="form-control mb-3"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Opposing Team Name (e.g., Jazz)"
-            value={opposingTeamName}
-            onChange={(e) => setOpposingTeamName(e.target.value)}
-            className="form-control mb-3"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Date (e.g., November 30 2024 or 10/22/2024)"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="form-control mb-3"
-            required
-          />
-          <button type="submit" className="btn btn-primary">
-            Submit
-          </button>
-        </form>
+        <div>
+          {loading ? (
+            <div style={styles.loadingContainer}>
+              <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
+              <p style={styles.loadingText}>Loading...</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="w-100 d-flex flex-column">
+              <input
+                type="text"
+                placeholder="League (e.g., NBA)"
+                value={league}
+                onChange={(e) => setLeague(e.target.value)}
+                style={styles.inputBox}
+                className="form-control mb-3"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Selected Team City (e.g., Dallas)"
+                value={selectedTeamCity}
+                onChange={(e) => setSelectedTeamCity(e.target.value)}
+                className="form-control mb-3"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Selected Team Name (e.g., Mavericks)"
+                value={selectedTeamName}
+                onChange={(e) => setSelectedTeamName(e.target.value)}
+                className="form-control mb-3"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Opposing Team City (e.g., Utah)"
+                value={opposingTeamCity}
+                onChange={(e) => setOpposingTeamCity(e.target.value)}
+                className="form-control mb-3"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Opposing Team Name (e.g., Jazz)"
+                value={opposingTeamName}
+                onChange={(e) => setOpposingTeamName(e.target.value)}
+                className="form-control mb-3"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Date (e.g., November 30 2024 or 10/22/2024)"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="form-control mb-3"
+                required
+              />
+              <button type="submit" className="btn btn-primary">
+                Submit
+              </button>
+            </form>
+          )}
+        </div>
 
         {responseMessage && (
           <div className="mt-3">
@@ -331,6 +345,33 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     marginTop: "auto",
+  },
+  loadingContainer: {
+    display: "flex",
+    alignItems: "center", // Align items vertically
+    justifyContent: "center", // Align items horizontally
+    gap: "10px", // Space between spinner and text
+    height: "100%", // Optional: Adjust based on layout
+  },
+  spinner: {
+    fontSize: "24px", // Adjust spinner size
+    color: "#4caf50", // Match your theme
+  },
+  loadingText: {
+    fontSize: "18px", // Adjust text size
+    color: "#4caf50", // Match your theme
+    fontWeight: "bold",
+    margin: 0, // Remove extra spacing
+  },
+  inputBox: {
+    fontSize: "16px", // Font size for readability
+    padding: "8px 12px", // Padding for a comfortable typing area
+    borderRadius: "6px", // Rounded corners for aesthetics
+    border: "1px solid #ccc", // Subtle border
+    marginBottom: "16px", // Space between input fields
+    width: "400px", // Make the input wider
+    maxWidth: "100%", // Prevent overflow on small screens
+    boxSizing: "border-box", // Ensure padding doesn’t affect width
   },
   inputBar: {
     display: "flex",
