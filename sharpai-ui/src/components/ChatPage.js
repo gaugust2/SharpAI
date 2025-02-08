@@ -136,6 +136,9 @@ function ChatPage() {
         >
           Logout
         </button>
+        <button onClick={() => navigate("/upload-betting-history")}>
+          Upload Betting History
+        </button>
         <div style={styles.recentChats}>
           <h2 className="fs-6 mb-2" style={styles.recentTitle}>
             Recent
