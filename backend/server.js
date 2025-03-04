@@ -12,6 +12,7 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.json());
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const { strict } = require("assert");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -44,6 +45,28 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model("User", userSchema, "Users");
+
+//Analysis schema
+const analysisSchema = new mongoose.Schema({}, { strict: false })
+const Analysis = mongoose.model("Analysis", analysisSchema, "Analyses")
+
+//Message schema
+const messageSchema = new mongoose.Schema({
+  conversationID: { type: mongoose.Schema.Types.ObjectId, ref: "Conversations", required: true },
+  text: { type: String, required: true },
+  role: { type: String, enum: ["user", "assistant"], required: true },
+  timestamp: { type: Date, default: Date.now }
+});
+const Message = mongoose.model("Message", messageSchema, "Messages")
+
+//Conversation Schema
+const conversationSchema = new mongoose.Schema({
+  userID: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
+  analysisID: { type: mongoose.Schema.Types.ObjectId, ref: "Analyses", required: true},
+  createdAt: { type: Date, default: Date.now }
+});
+
+const Conversation = mongoose.model("Conversation", conversationSchema, "Conversations");
 
 // Routes
 app.post("/signup", async (req, res) => {
@@ -188,10 +211,17 @@ app.post("/betslip", async (req, res) => {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
+    // Step 7: Create new Conversation and Analysis in MongoDB
+    const newAnalysis = new Analysis(analysis)
+    const analysisID = (await newAnalysis.save())._id.toString();
+
+    const newConversation = new Conversation({ userID: req.user.id, analysisID: analysisID,});
+    const conversationID = (await newConversation.save())._id.toString();
+
     console.log("Analysis generated:", analysis);
 
-    // Step 7: Respond with the analysis result
-    res.json({ analysis });
+    // Step 8: Respond with the analysis result
+    res.status(200).json({ conversationID, analysis });
   } catch (error) {
     console.error("Error in /betslip:", error.message);
     res
@@ -200,7 +230,7 @@ app.post("/betslip", async (req, res) => {
   }
 });
 
-//should use later for better secuirty
+//should use later for better security
 const authenticateToken = (req, res, next) => {
   const token = req.headers["authorization"];
 
