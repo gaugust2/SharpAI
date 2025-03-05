@@ -19,15 +19,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, "build")));
 
-// Handle any unknown routes (React routes)
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
-
-app.get("/", async (req, res) => {
-  res.send("Hello World!");
-});
-
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -48,13 +39,14 @@ const User = mongoose.model("User", userSchema, "Users");
 
 //Message schema
 const messageSchema = new mongoose.Schema({
-  text: { type: String, required: true },
   role: { type: String, enum: ["user", "assistant"], required: true },
+  content: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
 
 //Conversation Schema
 const conversationSchema = new mongoose.Schema({
+  conversationName: { type: mongoose.Schema.Types.String, required: true },
   userID: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Users",
@@ -70,6 +62,14 @@ const Conversation = mongoose.model(
   conversationSchema,
   "Conversations"
 );
+
+const analysisToString = (analysis) => {
+  const analysisString = Object.entries(analysis)
+    .map(([key, value]) => `${key}: \n${value}`)
+    .join("\n\n");
+
+  return analysisString;
+};
 
 // Routes
 app.post("/signup", async (req, res) => {
@@ -195,8 +195,21 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
-    // Step 4: Create new Conversation in MongoDB
+    // Step 4: Create name for new conversation
+    const title = await getAIResponse([
+      {
+        role: "system", 
+        content: "Provide a 3-5 word conclusion based on the analysis provided."
+      },
+      {
+        role: "assistant",
+        content: analysisToString(analysis)
+      }
+    ], 0.9)
+
+    // Step 5: Create new Conversation in MongoDB
     const newConversation = new Conversation({
+      conversationName: `${title} - ${date}`,
       userID: req.user.id,
       analysis: analysis,
     });
@@ -204,7 +217,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
 
     console.log("Analysis generated:", analysis);
 
-    // Step 5: Respond with the analysis result
+    // Step 6: Respond with the analysis result
     res.status(200).json({ conversationID, analysis });
   } catch (error) {
     console.error("Error in /betslip:", error.message);
@@ -219,6 +232,10 @@ app.post("/chat", authenticateToken, async (req, res) => {
     // Step 1: Check headers for conversation ID
     const conversationID = req.headers["conversation-id"];
 
+    if(!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id"});
+    }
+
     // Step 2: Validate incoming data
     const { message } = req.body;
     if (!message) {
@@ -230,32 +247,37 @@ app.post("/chat", authenticateToken, async (req, res) => {
     // Step 3: Store user's message in MongoDB
     const updatedConversation = await Conversation.findByIdAndUpdate(
       conversationID,
-      { $push: { messages: { text: message, role: "user" } }},
+      { $push: { messages: { role: "user", content: message } } },
       { new: true }
     );
 
     // Step 4: Prepare/process the data for OpenAI
-    const analysisString = Object.entries(updatedConversation.analysis)
-      .map(([key, value]) => `${key}: \n${value}`)
-      .join("\n\n");
+    const analysisString = analysisToString(updatedConversation.analysis)
 
     const messages = [
-      { role: "system", content: "You are an expert sports betting analysis assistant. Your task is to provide thorough and accurate analyses of sports betting opportunities, explaining the rationale behind your recommendations. When responding to user queries, you should reference your analysis and offer clear, data-driven insights."},
-      { role: "assistant", content: analysisString}
-    ]
-    
-    updatedConversation.messages.slice(-4).forEach(msg => {
-      messages.push({ role: msg.role, content: msg.text });
+      {
+        role: "system",
+        content:
+          "You are an expert sports betting analysis assistant. Your task is to provide thorough and accurate analyses of sports betting opportunities, explaining the rationale behind your recommendations. When responding to user queries, you should reference your analysis and offer clear, data-driven insights.",
+      },
+      { role: "assistant", content: analysisString },
+    ];
+
+    updatedConversation.messages.slice(-4).forEach((msg) => {
+      messages.push({ role: msg.role, content: msg.content });
     });
 
     // Step 5: Get OpenAI response
     const assistantMessage = await getAIResponse(messages);
-    
+
+    if (!assistantMessage) {
+      return res.status(500).json({ message: "Assistant failed to respond." });
+    }
+
     // Step 6: Store assistant's message in MongoDB
-    await Conversation.findByIdAndUpdate(
-      conversationID,
-      { $push: { messages: { text: assistantMessage, role: "assistant" } }}
-    );
+    await Conversation.findByIdAndUpdate(conversationID, {
+      $push: { messages: { role: "assistant", content: assistantMessage } },
+    });
 
     // Step 7: Respond with the assistant's message
     res.status(200).send(assistantMessage);
@@ -263,8 +285,50 @@ app.post("/chat", authenticateToken, async (req, res) => {
     console.error("Error in /chat:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to process betslip: ${error.message}` });
+      .json({ message: `Failed to process message: ${error.message}` });
   }
+});
+
+app.get("/conversationNames", authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Query MongoDB for list of conversation names using userID
+    const conversations = await Conversation.find({ userID: req.user.id }, "_id conversationName").exec()
+
+    // Step 2: Respond with the list of the user's conversations
+    res.json({ conversations })
+  } catch (error) {
+    console.error("Error in /conversationNames:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to return conversation names: ${error.message}` });
+  }
+})
+
+app.get("/conversation", authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Check headers for conversation ID
+    const conversationID = req.headers["conversation-id"];
+
+    if(!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id"});
+    }
+
+    // Step 2: Query MongoDB for full conversation
+    const conversation = await Conversation.findById(conversationID, 'analysis messages').exec()
+
+    // Step 3: Respond with the analysis and array of messages
+    res.json({ conversation })
+  } catch (error) {
+    console.error("Error in /conversationNames:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to return conversation names: ${error.message}` });
+  }
+})
+
+// This is a "Catch all route" - Handle any unknown routes (React routes)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
 const PORT = 3000;
