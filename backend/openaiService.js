@@ -108,11 +108,11 @@ async function getAnalysis(betslip, externalData) {
   }
 }
 
-async function getAIResponse(messages) {
+async function getAIResponse(messages, temp = 0.4) {
   const completion = await openai.chat.completions.create({
     model: "gpt-3.5-turbo-0125",
     messages: messages,
-    temperature: 0.4,
+    temperature: temp,
   }); //Temperature can be between 0-1. Higher values are better for creativity, lower values are better for following instructions.
 
   return completion.choices[0].message.content;

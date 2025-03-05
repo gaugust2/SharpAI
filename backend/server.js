@@ -19,15 +19,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, "build")));
 
-// Handle any unknown routes (React routes)
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "build", "index.html"));
-});
-
-app.get("/", async (req, res) => {
-  res.send("Hello World!");
-});
-
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -214,7 +205,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
         role: "assistant",
         content: analysisToString(analysis)
       }
-    ])
+    ], 0.9)
 
     // Step 5: Create new Conversation in MongoDB
     const newConversation = new Conversation({
@@ -290,8 +281,29 @@ app.post("/chat", authenticateToken, async (req, res) => {
     console.error("Error in /chat:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to process betslip: ${error.message}` });
+      .json({ message: `Failed to process message: ${error.message}` });
   }
+});
+
+app.get("/conversationNames", authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Query MongoDB for list of conversation names using userID
+    const conversations = await Conversation.find({ userID: req.user.id }, "_id conversationName").exec()
+    console.log("hello")
+
+    // Step 2: Respond with the list of the user's conversations
+    res.json({ conversations })
+  } catch (error) {
+    console.error("Error in /conversationNames:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to return conversation names: ${error.message}` });
+  }
+})
+
+// Catch all route - Handle any unknown routes (React routes)
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
 });
 
 const PORT = 3000;
