@@ -48,13 +48,14 @@ const User = mongoose.model("User", userSchema, "Users");
 
 //Message schema
 const messageSchema = new mongoose.Schema({
-  text: { type: String, required: true },
   role: { type: String, enum: ["user", "assistant"], required: true },
+  content: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
 
 //Conversation Schema
 const conversationSchema = new mongoose.Schema({
+  conversationName: { type: mongoose.Schema.Types.String, required: true },
   userID: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Users",
@@ -70,6 +71,14 @@ const Conversation = mongoose.model(
   conversationSchema,
   "Conversations"
 );
+
+const analysisToString = (analysis) => {
+  const analysisString = Object.entries(analysis)
+    .map(([key, value]) => `${key}: \n${value}`)
+    .join("\n\n");
+
+  return analysisString;
+};
 
 // Routes
 app.post("/signup", async (req, res) => {
@@ -195,8 +204,21 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
-    // Step 4: Create new Conversation in MongoDB
+    // Step 4: Create name for new conversation
+    const title = await getAIResponse([
+      {
+        role: "system", 
+        content: "Provide a 3-5 word conclusion based on the analysis provided."
+      },
+      {
+        role: "assistant",
+        content: analysisToString(analysis)
+      }
+    ])
+
+    // Step 5: Create new Conversation in MongoDB
     const newConversation = new Conversation({
+      conversationName: `${title} - ${date}`,
       userID: req.user.id,
       analysis: analysis,
     });
@@ -204,7 +226,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
 
     console.log("Analysis generated:", analysis);
 
-    // Step 5: Respond with the analysis result
+    // Step 6: Respond with the analysis result
     res.status(200).json({ conversationID, analysis });
   } catch (error) {
     console.error("Error in /betslip:", error.message);
@@ -230,32 +252,37 @@ app.post("/chat", authenticateToken, async (req, res) => {
     // Step 3: Store user's message in MongoDB
     const updatedConversation = await Conversation.findByIdAndUpdate(
       conversationID,
-      { $push: { messages: { text: message, role: "user" } }},
+      { $push: { messages: { role: "user", content: message } } },
       { new: true }
     );
 
     // Step 4: Prepare/process the data for OpenAI
-    const analysisString = Object.entries(updatedConversation.analysis)
-      .map(([key, value]) => `${key}: \n${value}`)
-      .join("\n\n");
+    const analysisString = analysisToString(updatedConversation.analysis)
 
     const messages = [
-      { role: "system", content: "You are an expert sports betting analysis assistant. Your task is to provide thorough and accurate analyses of sports betting opportunities, explaining the rationale behind your recommendations. When responding to user queries, you should reference your analysis and offer clear, data-driven insights."},
-      { role: "assistant", content: analysisString}
-    ]
-    
-    updatedConversation.messages.slice(-4).forEach(msg => {
-      messages.push({ role: msg.role, content: msg.text });
+      {
+        role: "system",
+        content:
+          "You are an expert sports betting analysis assistant. Your task is to provide thorough and accurate analyses of sports betting opportunities, explaining the rationale behind your recommendations. When responding to user queries, you should reference your analysis and offer clear, data-driven insights.",
+      },
+      { role: "assistant", content: analysisString },
+    ];
+
+    updatedConversation.messages.slice(-4).forEach((msg) => {
+      messages.push({ role: msg.role, content: msg.content });
     });
 
     // Step 5: Get OpenAI response
     const assistantMessage = await getAIResponse(messages);
-    
+
+    if (!assistantMessage) {
+      return res.status(500).json({ message: "Assistant failed to respond." });
+    }
+
     // Step 6: Store assistant's message in MongoDB
-    await Conversation.findByIdAndUpdate(
-      conversationID,
-      { $push: { messages: { text: assistantMessage, role: "assistant" } }}
-    );
+    await Conversation.findByIdAndUpdate(conversationID, {
+      $push: { messages: { role: "assistant", content: assistantMessage } },
+    });
 
     // Step 7: Respond with the assistant's message
     res.status(200).send(assistantMessage);
