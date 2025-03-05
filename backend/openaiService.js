@@ -120,4 +120,5 @@ async function getAIResponse(messages) {
 
 module.exports = {
   getAnalysis,
+  getAIResponse
 };

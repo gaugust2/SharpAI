@@ -2,9 +2,9 @@ const express = require("express");
 const app = express();
 const axios = require("axios");
 const config = require("./config");
-const { getAnalysis } = require("./openaiService");
+const { getAnalysis, getAIResponse } = require("./openaiService");
 const { sportsDataIOController } = require("./sportsDataIOService");
-const { authenticateToken } = require("./middleware")
+const { authenticateToken } = require("./middleware");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
@@ -13,7 +13,6 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.json());
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
-const { strict } = require("assert");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -146,7 +145,7 @@ app.post("/login", async (req, res) => {
 
 app.post("/betslip", authenticateToken, async (req, res) => {
   try {
-    // Step 4: Validate incoming betslip data
+    // Step 1: Validate incoming betslip data
     const { league, selectedTeam, opposingTeam, date } = req.body;
     if (!league || !selectedTeam || !opposingTeam || !date) {
       return res
@@ -172,7 +171,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       date,
     });
 
-    // Step 5: Call sportsDataIOController to process the betslip
+    // Step 2: Call sportsDataIOController to process the betslip
     const externalData = await sportsDataIOController({
       league,
       selectedTeam,
@@ -186,7 +185,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       });
     }
 
-    // Step 6: Perform analysis with the external data
+    // Step 3: Perform analysis with the external data
     const analysis = await getAnalysis(
       { selectedTeam, opposingTeam },
       externalData
@@ -196,7 +195,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
-    // Step 7: Create new Conversation in MongoDB
+    // Step 4: Create new Conversation in MongoDB
     const newConversation = new Conversation({
       userID: req.user.id,
       analysis: analysis,
@@ -205,7 +204,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
 
     console.log("Analysis generated:", analysis);
 
-    // Step 8: Respond with the analysis result
+    // Step 5: Respond with the analysis result
     res.status(200).json({ conversationID, analysis });
   } catch (error) {
     console.error("Error in /betslip:", error.message);
@@ -217,8 +216,49 @@ app.post("/betslip", authenticateToken, async (req, res) => {
 
 app.post("/chat", authenticateToken, async (req, res) => {
   try {
+    // Step 1: Check headers for conversation ID
+    const conversationID = req.headers["conversation-id"];
 
-    res.json({ user: req.user });
+    // Step 2: Validate incoming data
+    const { message } = req.body;
+    if (!message) {
+      return res
+        .status(400)
+        .json({ error: "Missing required fields in betslip" });
+    }
+
+    // Step 3: Store user's message in MongoDB
+    const updatedConversation = await Conversation.findByIdAndUpdate(
+      conversationID,
+      { $push: { messages: { text: message, role: "user" } }},
+      { new: true }
+    );
+
+    // Step 4: Prepare/process the data for OpenAI
+    const analysisString = Object.entries(updatedConversation.analysis)
+      .map(([key, value]) => `${key}: \n${value}`)
+      .join("\n\n");
+
+    const messages = [
+      { role: "system", content: "You are an expert sports betting analysis assistant. Your task is to provide thorough and accurate analyses of sports betting opportunities, explaining the rationale behind your recommendations. When responding to user queries, you should reference your analysis and offer clear, data-driven insights."},
+      { role: "assistant", content: analysisString}
+    ]
+    
+    updatedConversation.messages.slice(-4).forEach(msg => {
+      messages.push({ role: msg.role, content: msg.text });
+    });
+
+    // Step 5: Get OpenAI response
+    const assistantMessage = await getAIResponse(messages);
+    
+    // Step 6: Store assistant's message in MongoDB
+    await Conversation.findByIdAndUpdate(
+      conversationID,
+      { $push: { messages: { text: assistantMessage, role: "assistant" } }}
+    );
+
+    // Step 7: Respond with the assistant's message
+    res.status(200).send(assistantMessage);
   } catch (error) {
     console.error("Error in /chat:", error.message);
     res
