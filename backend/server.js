@@ -232,6 +232,10 @@ app.post("/chat", authenticateToken, async (req, res) => {
     // Step 1: Check headers for conversation ID
     const conversationID = req.headers["conversation-id"];
 
+    if(!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id"});
+    }
+
     // Step 2: Validate incoming data
     const { message } = req.body;
     if (!message) {
@@ -289,7 +293,6 @@ app.get("/conversationNames", authenticateToken, async (req, res) => {
   try {
     // Step 1: Query MongoDB for list of conversation names using userID
     const conversations = await Conversation.find({ userID: req.user.id }, "_id conversationName").exec()
-    console.log("hello")
 
     // Step 2: Respond with the list of the user's conversations
     res.json({ conversations })
@@ -301,7 +304,29 @@ app.get("/conversationNames", authenticateToken, async (req, res) => {
   }
 })
 
-// Catch all route - Handle any unknown routes (React routes)
+app.get("/conversation", authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Check headers for conversation ID
+    const conversationID = req.headers["conversation-id"];
+
+    if(!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id"});
+    }
+
+    // Step 2: Query MongoDB for full conversation
+    const conversation = await Conversation.findById(conversationID, 'analysis messages').exec()
+
+    // Step 3: Respond with the analysis and array of messages
+    res.json({ conversation })
+  } catch (error) {
+    console.error("Error in /conversationNames:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to return conversation names: ${error.message}` });
+  }
+})
+
+// This is a "Catch all route" - Handle any unknown routes (React routes)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
 });
