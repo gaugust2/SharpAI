@@ -4,6 +4,7 @@ const axios = require("axios");
 const config = require("./config");
 const { getAnalysis } = require("./openaiService");
 const { sportsDataIOController } = require("./sportsDataIOService");
+const { authenticateToken } = require("./middleware")
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
@@ -46,27 +47,30 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema, "Users");
 
-//Analysis schema
-const analysisSchema = new mongoose.Schema({}, { strict: false })
-const Analysis = mongoose.model("Analysis", analysisSchema, "Analyses")
-
 //Message schema
 const messageSchema = new mongoose.Schema({
-  conversationID: { type: mongoose.Schema.Types.ObjectId, ref: "Conversations", required: true },
   text: { type: String, required: true },
   role: { type: String, enum: ["user", "assistant"], required: true },
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
 });
-const Message = mongoose.model("Message", messageSchema, "Messages")
 
 //Conversation Schema
 const conversationSchema = new mongoose.Schema({
-  userID: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
-  analysisID: { type: mongoose.Schema.Types.ObjectId, ref: "Analyses", required: true},
-  createdAt: { type: Date, default: Date.now }
+  userID: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Users",
+    required: true,
+  },
+  analysis: { type: mongoose.Schema.Types.Mixed, required: true },
+  messages: [messageSchema],
+  createdAt: { type: Date, default: Date.now },
 });
 
-const Conversation = mongoose.model("Conversation", conversationSchema, "Conversations");
+const Conversation = mongoose.model(
+  "Conversation",
+  conversationSchema,
+  "Conversations"
+);
 
 // Routes
 app.post("/signup", async (req, res) => {
@@ -140,27 +144,8 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/betslip", async (req, res) => {
+app.post("/betslip", authenticateToken, async (req, res) => {
   try {
-    // Step 1: Extract token from the Authorization header
-    const token = req.headers["authorization"]?.split(" ")[1]; // "Bearer token"
-
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
-
-    // Step 2: Verify the token
-    let decoded;
-    try {
-      decoded = jwt.verify(token, JWT_SECRET); // Ensure JWT_SECRET matches
-    } catch (err) {
-      console.error("Token verification failed:", err.message);
-      return res.status(401).json({ message: "Invalid or expired token" });
-    }
-
-    // Step 3: Attach the decoded token payload to the request (optional)
-    req.user = decoded;
-
     // Step 4: Validate incoming betslip data
     const { league, selectedTeam, opposingTeam, date } = req.body;
     if (!league || !selectedTeam || !opposingTeam || !date) {
@@ -211,11 +196,11 @@ app.post("/betslip", async (req, res) => {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
-    // Step 7: Create new Conversation and Analysis in MongoDB
-    const newAnalysis = new Analysis(analysis)
-    const analysisID = (await newAnalysis.save())._id.toString();
-
-    const newConversation = new Conversation({ userID: req.user.id, analysisID: analysisID,});
+    // Step 7: Create new Conversation in MongoDB
+    const newConversation = new Conversation({
+      userID: req.user.id,
+      analysis: analysis,
+    });
     const conversationID = (await newConversation.save())._id.toString();
 
     console.log("Analysis generated:", analysis);
@@ -230,22 +215,17 @@ app.post("/betslip", async (req, res) => {
   }
 });
 
-//should use later for better security
-const authenticateToken = (req, res, next) => {
-  const token = req.headers["authorization"];
-
-  if (!token) {
-    return res.status(401).json({ message: "Access denied, token missing" });
-  }
-
+app.post("/chat", authenticateToken, async (req, res) => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
+
+    res.json({ user: req.user });
   } catch (error) {
-    return res.status(403).json({ message: "Invalid token" });
+    console.error("Error in /chat:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to process betslip: ${error.message}` });
   }
-};
+});
 
 const PORT = 3000;
 app.listen(PORT, "0.0.0.0", () => {
