@@ -347,6 +347,21 @@ app.get("/conversation", authenticateToken, async (req, res) => {
   }
 });
 
+app.delete("/deleteConversations", authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Delete all conversations for the given userID
+    await Conversation.deleteMany({ userID: req.user.id });
+
+    // Step 2: Respond with a success message
+    res.json({ message: "All conversations deleted successfully" });
+  } catch (error) {
+    console.error("Error in /deleteConversations:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to return conversation names: ${error.message}` });
+  }
+})
+
 // This is a "Catch all route" - Handle any unknown routes (React routes)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
