@@ -33,10 +33,10 @@ const  mergeBetslips = (betslip, betslipFromImage) => {
 const checkEmptyFields = (merged) => {
     let missingFields = [];
     if (!merged.league) missingFields.push("League");
-    if (!merged.selectedTeam.city) missingFields.push("Selected Team - city");
-    if (!merged.selectedTeam.name) missingFields.push("Selected Team - name");
-    if (!merged.opposingTeam.city) missingFields.push("Opposing Team - city");
-    if (!merged.opposingTeam.name) missingFields.push("Opposing Team - name");
+    if (!merged.selectedTeam.city) missingFields.push("Selected Team - City");
+    if (!merged.selectedTeam.name) missingFields.push("Selected Team - Name");
+    if (!merged.opposingTeam.city) missingFields.push("Opposing Team - City");
+    if (!merged.opposingTeam.name) missingFields.push("Opposing Team - Name");
     if (!merged.date) missingFields.push("Date");
 
     let response;

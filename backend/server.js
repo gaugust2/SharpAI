@@ -143,35 +143,42 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/betslip", authenticateToken, async (req, res) => {
+app.post("/betslip", upload.single("file"), authenticateToken, async (req, res) => {
   try {
-    // Step 1: Validate incoming betslip data
-    const { league, selectedTeam, opposingTeam, date } = req.body;
-    if (!league || !selectedTeam || !opposingTeam || !date) {
-      return res
-        .status(400)
-        .json({ message: "Missing required fields in betslip" });
+    // Step 1: Parse the form betslip & photo uploaded betslip
+    let formBetslip = req.body.formBetslip;
+    if (formBetslip) {
+        formBetslip = JSON.parse(formBetslip);
     }
 
-    if (
-      !selectedTeam.city ||
-      !selectedTeam.name ||
-      !opposingTeam.city ||
-      !opposingTeam.name
-    ) {
-      return res.status(400).json({
-        message: "Selected team or opposing team is missing city or name.",
-      });
+    let imageBetslip;
+    if (req.file) {
+      let base64Image = null;
+
+      const filePath = req.file.path;
+
+      base64Image = fs.readFileSync(filePath, { encoding: "base64" });
+      fs.unlinkSync(filePath);
+
+      if (!base64Image) {
+        return res.status(400).json({ error: "Could not parse image" });
+      }
+
+      imageBetslip = JSON.parse(await getAIStructuredResponse(base64Image));
     }
 
-    console.log("Received betslip:", {
-      league,
-      selectedTeam,
-      opposingTeam,
-      date,
-    });
+    // Step 2: Merge the parsed betslips and check for missing fields
+    const mergedBetslip = mergeBetslips(formBetslip, imageBetslip)
+    const message = checkEmptyFields(mergedBetslip); //Return either an empty string, or an error string
 
-    // Step 2: Call sportsDataIOController to process the betslip
+    if(message) {
+      return res.status(400).json({ message }) //If theres an empty field in the merged object, tell the user to fill in the missing fields in the form
+    }
+
+    console.log("Received betslip: ", { mergedBetslip });
+    const { league, selectedTeam, opposingTeam, date } = mergedBetslip;
+
+    // Step 3: Call sportsDataIOController to process the betslip
     const externalData = await sportsDataIOController({
       league,
       selectedTeam,
@@ -185,7 +192,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       });
     }
 
-    // Step 3: Perform analysis with the external data
+    // Step 4: Perform analysis with the external data
     const analysis = await getAnalysis(
       { selectedTeam, opposingTeam },
       externalData
@@ -195,7 +202,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
-    // Step 4: Create name for new conversation
+    // Step 5: Create name for new conversation
     const title = await getAIResponse(
       [
         {
@@ -211,7 +218,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       0.9
     );
 
-    // Step 5: Create new Conversation in MongoDB
+    // Step 6: Create new Conversation in MongoDB
     const newConversation = new Conversation({
       conversationName: `${title} - ${date}`,
       userID: req.user.id,
@@ -221,7 +228,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
 
     console.log("Analysis generated:", analysis);
 
-    // Step 6: Respond with the analysis result
+    // Step 7: Respond with the analysis result
     res.status(200).json({ conversationID, analysis });
   } catch (error) {
     console.error("Error in /betslip:", error.message);
@@ -337,43 +344,6 @@ app.get("/conversation", authenticateToken, async (req, res) => {
       .json({
         message: `Failed to return conversation names: ${error.message}`,
       });
-  }
-});
-
-app.post("/upload", upload.single("file"), async (req, res) => {
-  try {
-    let betslip = req.body.betslip; // Extract the JSON string
-    if (betslip) {
-        betslip = JSON.parse(betslip); // Convert string back to JSON
-    }
-
-    let betslipFromImage;
-    if (req.file) {
-      let base64Image = null;
-
-      const filePath = req.file.path;
-
-      base64Image = fs.readFileSync(filePath, { encoding: "base64" });
-      fs.unlinkSync(filePath);
-
-      if (!base64Image) {
-        return res.status(400).json({ error: "Could not parse image" });
-      }
-
-      betslipFromImage = JSON.parse(await getAIStructuredResponse(base64Image));
-    }
-
-    const mergedBetslip = mergeBetslips(betslip, betslipFromImage)
-    const hasEmpty = checkEmptyFields(mergedBetslip);
-
-    if(hasEmpty) {
-      return res.json({ hasEmpty })
-    }
-
-    return res.json({ mergedBetslip });
-  } catch (error) {
-    console.error("Error handling upload:", error);
-    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
