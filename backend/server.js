@@ -2,7 +2,12 @@ const express = require("express");
 const app = express();
 const axios = require("axios");
 const config = require("./config");
-const { getAnalysis, getAIResponse } = require("./openaiService");
+const {
+  getAnalysis,
+  getAIResponse,
+  getAIStructuredResponse,
+} = require("./openaiService");
+const { analysisToString, mergeBetslips, checkEmptyFields } = require("./utils/helpers")
 const { sportsDataIOController } = require("./sportsDataIOService");
 const { authenticateToken } = require("./middleware");
 const mongoose = require("mongoose");
@@ -13,11 +18,14 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.json());
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const multer = require("multer");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, "build")));
+const upload = multer({ dest: "uploads/" });
 
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -62,14 +70,6 @@ const Conversation = mongoose.model(
   conversationSchema,
   "Conversations"
 );
-
-const analysisToString = (analysis) => {
-  const analysisString = Object.entries(analysis)
-    .map(([key, value]) => `${key}: \n${value}`)
-    .join("\n\n");
-
-  return analysisString;
-};
 
 // Routes
 app.post("/signup", async (req, res) => {
@@ -196,16 +196,20 @@ app.post("/betslip", authenticateToken, async (req, res) => {
     }
 
     // Step 4: Create name for new conversation
-    const title = await getAIResponse([
-      {
-        role: "system", 
-        content: "Provide a 3-5 word conclusion based on the analysis provided."
-      },
-      {
-        role: "assistant",
-        content: analysisToString(analysis)
-      }
-    ], 0.9)
+    const title = await getAIResponse(
+      [
+        {
+          role: "system",
+          content:
+            "Provide a 3-5 word conclusion based on the analysis provided.",
+        },
+        {
+          role: "assistant",
+          content: analysisToString(analysis),
+        },
+      ],
+      0.9
+    );
 
     // Step 5: Create new Conversation in MongoDB
     const newConversation = new Conversation({
@@ -232,8 +236,8 @@ app.post("/chat", authenticateToken, async (req, res) => {
     // Step 1: Check headers for conversation ID
     const conversationID = req.headers["conversation-id"];
 
-    if(!conversationID) {
-      return res.status(400).json({ error: "Header missing conversation-id"});
+    if (!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id" });
     }
 
     // Step 2: Validate incoming data
@@ -252,7 +256,7 @@ app.post("/chat", authenticateToken, async (req, res) => {
     );
 
     // Step 4: Prepare/process the data for OpenAI
-    const analysisString = analysisToString(updatedConversation.analysis)
+    const analysisString = analysisToString(updatedConversation.analysis);
 
     const messages = [
       {
@@ -292,39 +296,86 @@ app.post("/chat", authenticateToken, async (req, res) => {
 app.get("/conversationNames", authenticateToken, async (req, res) => {
   try {
     // Step 1: Query MongoDB for list of conversation names using userID
-    const conversations = await Conversation.find({ userID: req.user.id }, "_id conversationName").exec()
+    const conversations = await Conversation.find(
+      { userID: req.user.id },
+      "_id conversationName"
+    ).exec();
 
     // Step 2: Respond with the list of the user's conversations
-    res.json({ conversations })
+    res.json({ conversations });
   } catch (error) {
     console.error("Error in /conversationNames:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to return conversation names: ${error.message}` });
+      .json({
+        message: `Failed to return conversation names: ${error.message}`,
+      });
   }
-})
+});
 
 app.get("/conversation", authenticateToken, async (req, res) => {
   try {
     // Step 1: Check headers for conversation ID
     const conversationID = req.headers["conversation-id"];
 
-    if(!conversationID) {
-      return res.status(400).json({ error: "Header missing conversation-id"});
+    if (!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id" });
     }
 
     // Step 2: Query MongoDB for full conversation
-    const conversation = await Conversation.findById(conversationID, 'analysis messages').exec()
+    const conversation = await Conversation.findById(
+      conversationID,
+      "analysis messages"
+    ).exec();
 
     // Step 3: Respond with the analysis and array of messages
-    res.json({ conversation })
+    res.json({ conversation });
   } catch (error) {
     console.error("Error in /conversationNames:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to return conversation names: ${error.message}` });
+      .json({
+        message: `Failed to return conversation names: ${error.message}`,
+      });
   }
-})
+});
+
+app.post("/upload", upload.single("file"), async (req, res) => {
+  try {
+    let betslip = req.body.betslip; // Extract the JSON string
+    if (betslip) {
+        betslip = JSON.parse(betslip); // Convert string back to JSON
+    }
+
+    let betslipFromImage;
+    if (req.file) {
+      let base64Image = null;
+
+      const filePath = req.file.path;
+
+      base64Image = fs.readFileSync(filePath, { encoding: "base64" });
+      fs.unlinkSync(filePath);
+
+      if (!base64Image) {
+        return res.status(400).json({ error: "Could not parse image" });
+      }
+
+      betslipFromImage = JSON.parse(await getAIStructuredResponse(base64Image));
+    }
+
+    const mergedBetslip = mergeBetslips(betslip, betslipFromImage)
+    const hasEmpty = checkEmptyFields(mergedBetslip);
+
+    if(hasEmpty) {
+      return res.json({ hasEmpty })
+    }
+
+    return res.json({ mergedBetslip });
+  } catch (error) {
+    console.error("Error handling upload:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 
 // This is a "Catch all route" - Handle any unknown routes (React routes)
 app.get("*", (req, res) => {
