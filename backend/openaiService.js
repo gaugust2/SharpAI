@@ -1,8 +1,23 @@
 const OpenAI = require("openai");
 const config = require("./config");
+const { z } = require('zod');
+const { zodResponseFormat } = require("openai/helpers/zod");
 
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
+});
+
+const schema = z.object({
+  league: z.string(),
+  selectedTeam: z.object({
+    city: z.string(),
+    name: z.string()
+  }),
+  opposingTeam: z.object({
+    city: z.string(),
+    name: z.string()
+  }),
+  date: z.string()
 });
 
 /*Analysis Sections:
@@ -118,7 +133,36 @@ async function getAIResponse(messages, temp = 0.4) {
   return completion.choices[0].message.content;
 }
 
+async function getAIStructuredResponse(base64Image) {
+  try {
+    const completion = await openai.beta.chat.completions.parse({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Identify the features of the betslip. If a feature is unclear or does not exist, leave as blank. If there is a date, use MM-DD-YYYY format.`,
+            },
+            {
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${base64Image}` },
+            },
+          ],
+        },
+      ],
+      response_format: zodResponseFormat(schema, "new_schema"),
+    });
+
+    return completion.choices[0].message.content;
+  } catch (error) {
+    console.error("Error sending image to OpenAI:", error);
+  }
+}
+
 module.exports = {
   getAnalysis,
-  getAIResponse
+  getAIResponse,
+  getAIStructuredResponse
 };
