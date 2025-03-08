@@ -1,10 +1,10 @@
 const axios = require('axios')
 const config = require('./config')
-const { gameFieldsToRemove, playerFieldsToRemove, projectionsFieldsToRemove } = require('./fieldsToRemove')
+const { gameFieldsToRemove, playerFieldsToRemove, projectionsFieldsToRemove } = require('./utils/fieldsToRemove')
 
 const { nflEndpoints,
     nbaEndpoints,
-    mlbEndpoints } = require('./apiEndpoints')
+    mlbEndpoints } = require('./utils/apiEndpoints')
 
 //Below are acceptable date formats from the user. Anything else will result in an error
 //October 22 2024
