@@ -28,7 +28,7 @@ app.use(express.static(path.join(__dirname, "build")));
 const upload = multer({ dest: "uploads/" });
 
 mongoose
-  .connect(process.env.MONGO_URI, {
+  .connect(config.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
