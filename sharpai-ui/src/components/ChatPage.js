@@ -102,7 +102,9 @@ function ChatPage() {
       }
 
       const data = await response.json();
+      localStorage.setItem("currentConversationID", data.conversationID); // Save token to localStorage
       setResponseMessage(data.analysis);
+      console.log(localStorage.getItem("currentConversationID"))
     } catch (error) {
       console.error("Error submitting bet slip:", error.message);
       alert(error.message);

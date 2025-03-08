@@ -63,36 +63,35 @@ async function getAnalysis(betslip, externalData) {
     const opposingTeamName = betslip.opposingTeam;
 
     // Fetch AI responses based on the team names
-    const selectedTeamLast5Games = await getAIResponse(
-      prompts.last5GamesPrompt(selectedTeamName, selectedTeamLast5GamesRaw)
-    );
-    const opposingTeamLast5Games = await getAIResponse(
-      prompts.last5GamesPrompt(opposingTeamName, opposingTeamLast5GamesRaw)
-    );
-    const selectedTeamInjuries = await getAIResponse(
-      prompts.injuriesPrompt(selectedTeamName, selectedTeamInjuriesList)
-    );
-    const opposingTeamInjuries = await getAIResponse(
-      prompts.injuriesPrompt(opposingTeamName, opposingTeamInjuriesList)
-    );
+    const selectedTeamLast5Games = await getAIResponse([{
+      role: "system", 
+      content: prompts.last5GamesPrompt(selectedTeamName, selectedTeamLast5GamesRaw)
+    }]);
+    const opposingTeamLast5Games = await getAIResponse([{
+      role: "system", 
+      content: prompts.last5GamesPrompt(opposingTeamName, opposingTeamLast5GamesRaw)
+    }]);
+    const selectedTeamInjuries = await getAIResponse([{
+      role: "system",
+      content: prompts.injuriesPrompt(selectedTeamName, selectedTeamInjuriesList)
+    }]);
+    const opposingTeamInjuries = await getAIResponse([{
+      role: "system",
+      content: prompts.injuriesPrompt(opposingTeamName, opposingTeamInjuriesList)
+    }]);
     const projections = Object.keys(projectionsRaw).length === 0 
     ? "The BAKER projections were not found for this game. Please check later, as they may be available." 
-    : await getAIResponse(prompts.projectionsPrompt(
-        selectedTeamName,
-        opposingTeamName,
-        projectionsRaw
-      )
-    );
+    : await getAIResponse([{
+      role: "system",
+      content: prompts.projectionsPrompt(selectedTeamName, opposingTeamName, projectionsRaw)
+    }]);
 
     // Concatenate all the responses to create a conclusion
     const concatenatedResponses = `${selectedTeamLast5Games}\n\n${opposingTeamLast5Games}\n\n${selectedTeamInjuries}\n\n${opposingTeamInjuries}\n\n${projections}`;
-    const conclusion = await getAIResponse(
-      prompts.conclusionPrompt(
-        selectedTeamName,
-        opposingTeamName,
-        concatenatedResponses
-      )
-    );
+    const conclusion = await getAIResponse([{
+      role: "system",
+      content: prompts.conclusionPrompt(selectedTeamName, opposingTeamName, concatenatedResponses)
+    }]);
 
     // Dynamically generate the object with team names in labels
     return {
@@ -109,11 +108,11 @@ async function getAnalysis(betslip, externalData) {
   }
 }
 
-async function getAIResponse(prompt) {
+async function getAIResponse(messages, temp = 0.4) {
   const completion = await openai.chat.completions.create({
     model: "gpt-3.5-turbo-0125",
-    messages: [{ role: "system", content: prompt }],
-    temperature: 0.4,
+    messages: messages,
+    temperature: temp,
   }); //Temperature can be between 0-1. Higher values are better for creativity, lower values are better for following instructions.
 
   return completion.choices[0].message.content;
@@ -121,4 +120,5 @@ async function getAIResponse(prompt) {
 
 module.exports = {
   getAnalysis,
+  getAIResponse
 };
