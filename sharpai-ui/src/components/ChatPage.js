@@ -11,11 +11,25 @@ function ChatPage() {
   const [opposingTeamCity, setOpposingTeamCity] = useState("");
   const [opposingTeamName, setOpposingTeamName] = useState("");
   const [date, setDate] = useState("");
-  const [responseMessage, setResponseMessage] = useState(null); // To display server response
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [responseMessage, setResponseMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedFiles(files);
+  };
+
   useEffect(() => {
+    // Check for stored analysis when component mounts
+    const storedAnalysis = localStorage.getItem("betAnalysis");
+    if (storedAnalysis) {
+      setResponseMessage(JSON.parse(storedAnalysis));
+      // Clear the stored analysis after retrieving it
+      localStorage.removeItem("betAnalysis");
+    }
+
     const token = localStorage.getItem("token");
     if (token) {
       try {
@@ -183,85 +197,142 @@ function ChatPage() {
             Enter your bet details below:
           </p>
         </div>
-        <div>
-          {loading ? (
-            <div style={styles.loadingContainer}>
-              <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
-              <p style={styles.loadingText}>Loading...</p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="w-100 d-flex flex-column">
-              <input
-                type="text"
-                placeholder="League (e.g., NBA)"
-                value={league}
-                onChange={(e) => setLeague(e.target.value)}
-                style={styles.inputBox}
-                className="form-control mb-3"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Selected Team City (e.g., Dallas)"
-                value={selectedTeamCity}
-                onChange={(e) => setSelectedTeamCity(e.target.value)}
-                className="form-control mb-3"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Selected Team Name (e.g., Mavericks)"
-                value={selectedTeamName}
-                onChange={(e) => setSelectedTeamName(e.target.value)}
-                className="form-control mb-3"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Opposing Team City (e.g., Utah)"
-                value={opposingTeamCity}
-                onChange={(e) => setOpposingTeamCity(e.target.value)}
-                className="form-control mb-3"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Opposing Team Name (e.g., Jazz)"
-                value={opposingTeamName}
-                onChange={(e) => setOpposingTeamName(e.target.value)}
-                className="form-control mb-3"
-                required
-              />
-              <input
-                type="text"
-                placeholder="Date (e.g., November 30 2024 or 10/22/2024)"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="form-control mb-3"
-                required
-              />
-              <button type="submit" className="btn btn-primary">
-                Submit
-              </button>
-            </form>
-          )}
-        </div>
-
-        {responseMessage && (
-          <div className="mt-3">
-            <h3>Analysis:</h3>
-            <div className="response-text">
-              {/* Render each piece of the response on a new line */}
-              {Object.entries(responseMessage).map(([key, value]) => (
-                <div key={key}>
-                  <strong>{formatSectionName(key)}:</strong>
-                  <p>{value}</p>
-                </div>
-              ))}
-            </div>
+        {loading ? (
+          <div style={styles.loadingContainer}>
+            <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
+            <p style={styles.loadingText}>Analyzing your bet...</p>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={styles.formContainer}>
+            <div style={styles.inputsWrapper}>
+              {/* Left side - Input fields */}
+              <div style={styles.inputSection}>
+                <input
+                  type="text"
+                  placeholder="League (e.g., NBA)"
+                  value={league}
+                  onChange={(e) => setLeague(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Selected Team City"
+                  value={selectedTeamCity}
+                  onChange={(e) => setSelectedTeamCity(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Selected Team Name"
+                  value={selectedTeamName}
+                  onChange={(e) => setSelectedTeamName(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Opposing Team City"
+                  value={opposingTeamCity}
+                  onChange={(e) => setOpposingTeamCity(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Opposing Team Name"
+                  value={opposingTeamName}
+                  onChange={(e) => setOpposingTeamName(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+              </div>
+
+              {/* Right side - File upload */}
+              <div style={styles.fileSection}>
+                <div style={styles.fileUploadContainer}>
+                  <label htmlFor="file-upload" style={styles.fileUploadLabel}>
+                    <div style={styles.uploadBox}>
+                      <i
+                        className="fas fa-cloud-upload-alt"
+                        style={styles.uploadIcon}
+                      ></i>
+                      <span>Drop screenshots here or click to upload</span>
+                      <span style={styles.fileInfo}>
+                        {selectedFiles.length > 0
+                          ? `${selectedFiles.length} file(s) selected`
+                          : "Supports: JPG, PNG, PDF"}
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept="image/*, .pdf"
+                    onChange={handleFileChange}
+                    style={styles.hiddenFileInput}
+                  />
+                </div>
+
+                {/* File List */}
+                {selectedFiles.length > 0 && (
+                  <div style={styles.fileList}>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} style={styles.fileItem}>
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedFiles((files) =>
+                              files.filter((_, i) => i !== index)
+                            )
+                          }
+                          style={styles.removeFileButton}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={styles.submitButton}
+            >
+              Submit
+            </button>
+          </form>
         )}
       </div>
+
+      {responseMessage && (
+        <div className="mt-3">
+          <h3>Analysis:</h3>
+          <div className="response-text">
+            {/* Render each piece of the response on a new line */}
+            {Object.entries(responseMessage).map(([key, value]) => (
+              <div key={key}>
+                <strong>{formatSectionName(key)}:</strong>
+                <p>{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -372,15 +443,39 @@ const styles = {
     fontWeight: "bold",
     margin: 0, // Remove extra spacing
   },
+  formContainer: {
+    width: "100%",
+    maxWidth: "800px",
+    margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  inputsWrapper: {
+    width: "100%",
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: "20px",
+    marginBottom: "20px",
+  },
+  inputSection: {
+    flex: 1,
+    maxWidth: "300px",
+  },
+  fileSection: {
+    flex: 1,
+    maxWidth: "300px",
+  },
   inputBox: {
-    fontSize: "16px", // Font size for readability
-    padding: "8px 12px", // Padding for a comfortable typing area
-    borderRadius: "6px", // Rounded corners for aesthetics
-    border: "1px solid #ccc", // Subtle border
-    marginBottom: "16px", // Space between input fields
-    width: "400px", // Make the input wider
-    maxWidth: "100%", // Prevent overflow on small screens
-    boxSizing: "border-box", // Ensure padding doesn’t affect width
+    fontSize: "14px",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    border: "1px solid #2C3E50",
+    marginBottom: "10px",
+    width: "100%",
+    backgroundColor: "#1C2639",
+    color: "#ffffff",
   },
   inputBar: {
     display: "flex",
@@ -390,6 +485,82 @@ const styles = {
     backgroundColor: "#1C2639",
     borderRadius: "30px",
     padding: "10px 20px",
+  },
+  fileUploadContainer: {
+    width: "100%",
+    marginBottom: "10px",
+  },
+  fileUploadLabel: {
+    width: "100%",
+    cursor: "pointer",
+  },
+  uploadBox: {
+    border: "2px dashed #2C3E50",
+    borderRadius: "6px",
+    padding: "15px",
+    textAlign: "center",
+    backgroundColor: "#1C2639",
+    color: "#a0aec0",
+    minHeight: "120px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+  uploadIcon: {
+    fontSize: "24px",
+    marginBottom: "8px",
+    color: "#0066ff",
+  },
+  fileInfo: {
+    display: "block",
+    fontSize: "12px",
+    marginTop: "8px",
+    color: "#8e9eb3",
+  },
+  hiddenFileInput: {
+    display: "none",
+  },
+  fileList: {
+    width: "300px",
+    marginTop: "8px",
+  },
+  fileItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px",
+    backgroundColor: "#1C2639",
+    borderRadius: "4px",
+    marginBottom: "4px",
+    fontSize: "14px",
+    color: "#ffffff",
+  },
+  removeFileButton: {
+    background: "none",
+    border: "none",
+    color: "#ff4d4d",
+    fontSize: "18px",
+    cursor: "pointer",
+    padding: "0 4px",
+    "&:hover": {
+      color: "#ff3333",
+    },
+  },
+  submitButton: {
+    backgroundColor: "#0066ff",
+    color: "#ffffff",
+    padding: "8px 30px",
+    borderRadius: "6px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "bold",
+    marginTop: "20px",
+    transition: "background-color 0.3s ease",
+    width: "200px",
+    "&:hover": {
+      backgroundColor: "#0052cc",
+    },
   },
   attachmentButton: {
     fontSize: "18px",

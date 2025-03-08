@@ -10,6 +10,7 @@ const BettingHistoryUpload = () => {
   const [opposingTeamName, setOpposingTeamName] = useState("");
   const [date, setDate] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
@@ -17,24 +18,67 @@ const BettingHistoryUpload = () => {
     setSelectedFiles(files);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Create FormData to handle both text inputs and files
-    const formData = new FormData();
-    formData.append("league", league);
-    formData.append("selectedTeamCity", selectedTeamCity);
-    formData.append("selectedTeamName", selectedTeamName);
-    formData.append("opposingTeamCity", opposingTeamCity);
-    formData.append("opposingTeamName", opposingTeamName);
-    formData.append("date", date);
 
-    // Append each file to formData
-    selectedFiles.forEach((file, index) => {
-      formData.append(`file${index}`, file);
-    });
+    setLoading(true);
 
-    // Handle form submission logic here
-    console.log("Form Data:", formData);
+    const betDetails = {
+      league: league.trim(),
+      selectedTeam: {
+        city: selectedTeamCity.trim(),
+        name: selectedTeamName.trim(),
+      },
+      opposingTeam: {
+        city: opposingTeamCity.trim(),
+        name: opposingTeamName.trim(),
+      },
+      date: date.trim(),
+    };
+
+    try {
+      // Submit the bet details for analysis
+      const response = await fetch("http://localhost:3000/betslip", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(betDetails),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 401) {
+          alert("Session expired. Please log in again.");
+          navigate("/login");
+          return;
+        }
+        throw new Error(errorData.message || "Failed to submit the bet slip.");
+      }
+
+      // Get the analysis response
+      const data = await response.json();
+
+      // Handle file uploads if needed
+      if (selectedFiles.length > 0) {
+        const formData = new FormData();
+        selectedFiles.forEach((file, index) => {
+          formData.append(`file${index}`, file);
+        });
+      }
+
+      // Store the analysis in localStorage to access it in ChatPage
+      localStorage.setItem("betAnalysis", JSON.stringify(data.analysis));
+
+      // Redirect to chat page after successful submission
+      navigate("/chat");
+    } catch (error) {
+      console.error("Error submitting bet slip:", error.message);
+      alert(error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,119 +121,126 @@ const BettingHistoryUpload = () => {
           <p style={styles.subMessage}>Enter your bet details below:</p>
         </div>
 
-        <form onSubmit={handleSubmit} style={styles.formContainer}>
-          <div style={styles.inputsWrapper}>
-            {/* Left side - Input fields */}
-            <div style={styles.inputSection}>
-              <input
-                type="text"
-                placeholder="League (e.g., NBA)"
-                value={league}
-                onChange={(e) => setLeague(e.target.value)}
-                style={styles.inputBox}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Selected Team City"
-                value={selectedTeamCity}
-                onChange={(e) => setSelectedTeamCity(e.target.value)}
-                style={styles.inputBox}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Selected Team Name"
-                value={selectedTeamName}
-                onChange={(e) => setSelectedTeamName(e.target.value)}
-                style={styles.inputBox}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Opposing Team City"
-                value={opposingTeamCity}
-                onChange={(e) => setOpposingTeamCity(e.target.value)}
-                style={styles.inputBox}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Opposing Team Name"
-                value={opposingTeamName}
-                onChange={(e) => setOpposingTeamName(e.target.value)}
-                style={styles.inputBox}
-                required
-              />
-              <input
-                type="text"
-                placeholder="Date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                style={styles.inputBox}
-                required
-              />
-            </div>
-
-            {/* Right side - File upload */}
-            <div style={styles.fileSection}>
-              <div style={styles.fileUploadContainer}>
-                <label htmlFor="file-upload" style={styles.fileUploadLabel}>
-                  <div style={styles.uploadBox}>
-                    <i
-                      className="fas fa-cloud-upload-alt"
-                      style={styles.uploadIcon}
-                    ></i>
-                    <span>Drop screenshots here or click to upload</span>
-                    <span style={styles.fileInfo}>
-                      {selectedFiles.length > 0
-                        ? `${selectedFiles.length} file(s) selected`
-                        : "Supports: JPG, PNG, PDF"}
-                    </span>
-                  </div>
-                </label>
+        {loading ? (
+          <div style={styles.loadingContainer}>
+            <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
+            <p style={styles.loadingText}>Analyzing your bet...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={styles.formContainer}>
+            <div style={styles.inputsWrapper}>
+              {/* Left side - Input fields */}
+              <div style={styles.inputSection}>
                 <input
-                  id="file-upload"
-                  type="file"
-                  multiple
-                  accept="image/*, .pdf"
-                  onChange={handleFileChange}
-                  style={styles.hiddenFileInput}
+                  type="text"
+                  placeholder="League (e.g., NBA)"
+                  value={league}
+                  onChange={(e) => setLeague(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Selected Team City"
+                  value={selectedTeamCity}
+                  onChange={(e) => setSelectedTeamCity(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Selected Team Name"
+                  value={selectedTeamName}
+                  onChange={(e) => setSelectedTeamName(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Opposing Team City"
+                  value={opposingTeamCity}
+                  onChange={(e) => setOpposingTeamCity(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Opposing Team Name"
+                  value={opposingTeamName}
+                  onChange={(e) => setOpposingTeamName(e.target.value)}
+                  style={styles.inputBox}
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  style={styles.inputBox}
+                  required
                 />
               </div>
 
-              {/* File List */}
-              {selectedFiles.length > 0 && (
-                <div style={styles.fileList}>
-                  {selectedFiles.map((file, index) => (
-                    <div key={index} style={styles.fileItem}>
-                      <span>{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedFiles((files) =>
-                            files.filter((_, i) => i !== index)
-                          )
-                        }
-                        style={styles.removeFileButton}
-                      >
-                        ×
-                      </button>
+              {/* Right side - File upload */}
+              <div style={styles.fileSection}>
+                <div style={styles.fileUploadContainer}>
+                  <label htmlFor="file-upload" style={styles.fileUploadLabel}>
+                    <div style={styles.uploadBox}>
+                      <i
+                        className="fas fa-cloud-upload-alt"
+                        style={styles.uploadIcon}
+                      ></i>
+                      <span>Drop screenshots here or click to upload</span>
+                      <span style={styles.fileInfo}>
+                        {selectedFiles.length > 0
+                          ? `${selectedFiles.length} file(s) selected`
+                          : "Supports: JPG, PNG, PDF"}
+                      </span>
                     </div>
-                  ))}
+                  </label>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept="image/*, .pdf"
+                    onChange={handleFileChange}
+                    style={styles.hiddenFileInput}
+                  />
                 </div>
-              )}
-            </div>
-          </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={styles.submitButton}
-          >
-            Submit
-          </button>
-        </form>
+                {/* File List */}
+                {selectedFiles.length > 0 && (
+                  <div style={styles.fileList}>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} style={styles.fileItem}>
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedFiles((files) =>
+                              files.filter((_, i) => i !== index)
+                            )
+                          }
+                          style={styles.removeFileButton}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn-primary"
+              style={styles.submitButton}
+            >
+              Submit
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -377,6 +428,23 @@ const styles = {
     "&:hover": {
       backgroundColor: "#0052cc",
     },
+  },
+  loadingContainer: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    height: "100%",
+  },
+  spinner: {
+    fontSize: "24px",
+    color: "#4caf50",
+  },
+  loadingText: {
+    fontSize: "18px",
+    color: "#4caf50",
+    fontWeight: "bold",
+    margin: 0,
   },
 };
 
