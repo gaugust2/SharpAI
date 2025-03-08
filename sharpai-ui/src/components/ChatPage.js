@@ -52,41 +52,30 @@ function ChatPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      !league ||
-      !selectedTeamCity ||
-      !selectedTeamName ||
-      !opposingTeamCity ||
-      !opposingTeamName ||
-      !date
-    ) {
-      alert("Please fill in all fields.");
-      return;
-    }
+    const formData = new FormData();
 
-    const betDetails = {
+    const formBetslip = {
       league: league.trim(),
-      selectedTeam: {
-        city: selectedTeamCity.trim(),
-        name: selectedTeamName.trim(),
-      },
-      opposingTeam: {
-        city: opposingTeamCity.trim(),
-        name: opposingTeamName.trim(),
-      },
+      selectedTeam: { city: selectedTeamCity.trim(), name: selectedTeamName.trim() },
+      opposingTeam: { city: opposingTeamCity.trim(), name: opposingTeamName.trim() },
       date: date.trim(),
     };
 
-    setLoading(true); // Start loading
+    formData.append("formBetslip", JSON.stringify(formBetslip))
 
+    // Append each file to formData
+    selectedFiles.forEach((file, index) => {
+      formData.append("file", file);
+    });
+
+    setLoading(true); // Start loading
     try {
       const response = await fetch("http://localhost:3000/betslip", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(betDetails),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -213,7 +202,6 @@ function ChatPage() {
                   value={league}
                   onChange={(e) => setLeague(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -221,7 +209,6 @@ function ChatPage() {
                   value={selectedTeamCity}
                   onChange={(e) => setSelectedTeamCity(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -229,7 +216,6 @@ function ChatPage() {
                   value={selectedTeamName}
                   onChange={(e) => setSelectedTeamName(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -237,7 +223,6 @@ function ChatPage() {
                   value={opposingTeamCity}
                   onChange={(e) => setOpposingTeamCity(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -245,7 +230,6 @@ function ChatPage() {
                   value={opposingTeamName}
                   onChange={(e) => setOpposingTeamName(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -253,7 +237,6 @@ function ChatPage() {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
               </div>
 
