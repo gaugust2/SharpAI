@@ -46,6 +46,37 @@ function ChatPage() {
       console.error("Error fetching conversations:", error);
     }
   };
+
+  const handleDeleteConversation = async (conversationID) => {
+    if (!window.confirm("Are you sure you want to delete this conversation?")) return;
+  
+    try {
+      const response = await fetch(`http://localhost:3000/deleteConversation/${conversationID}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to delete conversation.");
+      }
+  
+      // Remove from state to update UI
+      setConversations((prev) => prev.filter((conv) => conv._id !== conversationID));
+  
+      // If deleted chat was selected, clear it from the chat window
+      if (selectedConversation?._id === conversationID) {
+        setSelectedConversation(null);
+        setMessages([]);
+        localStorage.removeItem("currentConversationID");
+      }
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      alert("Failed to delete conversation. Please try again.");
+    }
+  };
+  
   
 
   useEffect(() => {
@@ -231,32 +262,52 @@ function ChatPage() {
           Upload Betting History
         </button>
         <div style={styles.recentChats}>
-          <h2 className="fs-6 mb-2" style={styles.recentTitle}>
-            Recent Conversations
-          </h2>
-          {conversations.length === 0 ? (
-            <p style={{ color: "#bbb", fontSize: "14px" }}>No previous conversations</p>
-          ) : (
-            conversations.map((conv) => (
+        <h2 className="fs-6 mb-2" style={styles.recentTitle}>
+          Recent Conversations
+        </h2>
+        {conversations.length === 0 ? (
+          <p style={{ color: "#bbb", fontSize: "14px" }}>No previous conversations</p>
+        ) : (
+          conversations.map((conv) => (
+            <div
+              key={conv._id}
+              className="d-flex justify-content-between align-items-center p-2"
+              style={{
+                ...styles.chatItem,
+                backgroundColor: selectedConversation?._id === conv._id ? "#1A73E8" : "transparent",
+              }}
+              onMouseEnter={(e) => {
+                if (!e.currentTarget.querySelector(".delete-btn:hover")) {
+                  e.currentTarget.style.backgroundColor = "#2C3E50"; 
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = selectedConversation?._id === conv._id ? "#1A73E8" : "transparent";
+              }}
+            >
               <div
-                key={conv._id}
-                className="d-flex align-items-center p-2"
-                style={{
-                  ...styles.chatItem,
-                  ...(selectedConversation?._id === conv._id ? styles.chatItemSelected : {}),
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2C3E50")}
-                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = selectedConversation?._id === conv._id ? "#1A73E8" : "transparent")}
                 onClick={() => handleSelectConversation(conv._id)}
+                className="d-flex align-items-center flex-grow-1"
+                style={{ cursor: "pointer" }}
               >
                 <div className="me-2" style={styles.chatIcon}>📄</div>
-                <span className="text-white" style={styles.chatText}>
-                  {conv.conversationName}
-                </span>
+                <span className="text-white" style={styles.chatText}>{conv.conversationName}</span>
               </div>
-            ))
-          )}
-        </div>
+
+              <button
+                onClick={() => handleDeleteConversation(conv._id)}
+                className="delete-btn"
+                style={styles.deleteButton}
+                onMouseEnter={(e) => e.currentTarget.style.color = "#ff3333"} 
+                onMouseLeave={(e) => e.currentTarget.style.color = "#ff4d4d"} 
+              >
+                🗑️
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+
 
 
       </div>
@@ -486,16 +537,26 @@ const styles = {
     alignItems: "center",
     padding: "10px",
     cursor: "pointer",
-    borderRadius: "8px", 
-    marginBottom: "5px", 
+    borderRadius: "8px",
+    marginBottom: "5px",
     transition: "background-color 0.2s ease-in-out",
+  },
+  chatItemSelected: {
+    backgroundColor: "#1A73E8",
+    color: "#fff",
+  },
+  deleteButton: {
+    background: "transparent",
+    border: "none",
+    color: "#ff4d4d",
+    fontSize: "16px",
+    cursor: "pointer",
+    padding: "5px",
+    marginLeft: "10px",
+    transition: "color 0.2s ease-in-out",
   },
   chatItemHovered: {
     backgroundColor: "#2C3E50", 
-  },
-  chatItemSelected: {
-    backgroundColor: "#1A73E8", 
-    color: "#fff",
   },
   chatIcon: {
     marginRight: "10px",
