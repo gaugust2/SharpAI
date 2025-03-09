@@ -24,6 +24,7 @@ function ChatPage() {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
   };
+  
   const fetchConversations = async () => {
     try {
       const response = await fetch("http://localhost:3000/conversationNames", {
@@ -39,20 +40,12 @@ function ChatPage() {
   
       const data = await response.json();
   
-      // Sort conversations by newest first (most recent at the top)
-      const sortedConversations = data.conversations.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
+      setConversations(data.conversations.reverse());
   
-      setConversations(sortedConversations);
     } catch (error) {
       console.error("Error fetching conversations:", error);
     }
   };
-  
- 
- 
-
   
 
   useEffect(() => {
@@ -250,10 +243,9 @@ function ChatPage() {
                 className="d-flex align-items-center p-2"
                 style={{
                   ...styles.chatItem,
-                  backgroundColor: selectedConversation?._id === conv._id ? "#1A73E8" : "transparent", // Highlight selected
-                  color: selectedConversation?._id === conv._id ? "#fff" : "#ccc",
+                  ...(selectedConversation?._id === conv._id ? styles.chatItemSelected : {}),
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2C3E50")} // Hover effect
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2C3E50")}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = selectedConversation?._id === conv._id ? "#1A73E8" : "transparent")}
                 onClick={() => handleSelectConversation(conv._id)}
               >
@@ -265,6 +257,7 @@ function ChatPage() {
             ))
           )}
         </div>
+
 
       </div>
 
@@ -491,8 +484,18 @@ const styles = {
   chatItem: {
     display: "flex",
     alignItems: "center",
-    padding: "10px 0",
+    padding: "10px",
     cursor: "pointer",
+    borderRadius: "8px", 
+    marginBottom: "5px", 
+    transition: "background-color 0.2s ease-in-out",
+  },
+  chatItemHovered: {
+    backgroundColor: "#2C3E50", 
+  },
+  chatItemSelected: {
+    backgroundColor: "#1A73E8", 
+    color: "#fff",
   },
   chatIcon: {
     marginRight: "10px",
