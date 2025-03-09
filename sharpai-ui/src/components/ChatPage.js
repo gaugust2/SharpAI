@@ -15,13 +15,49 @@ function ChatPage() {
   const [responseMessage, setResponseMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [messages, setMessages] = useState([]);
+
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
   };
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/conversationNames", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch conversations.");
+      }
+  
+      const data = await response.json();
+  
+      // Sort conversations by newest first (most recent at the top)
+      const sortedConversations = data.conversations.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  
+      setConversations(sortedConversations);
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    }
+  };
+  
+ 
+ 
+
+  
 
   useEffect(() => {
+      // Fetch previous conversations
+    fetchConversations();
     // Check for stored analysis when component mounts
     const storedAnalysis = localStorage.getItem("betAnalysis");
     if (storedAnalysis) {
@@ -44,6 +80,39 @@ function ChatPage() {
     }
   }, []);
 
+
+  const handleSelectConversation = async (conversationID) => {
+    try {
+      const response = await fetch("http://localhost:3000/conversation", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "conversation-id": conversationID,
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to fetch conversation details.");
+      }
+  
+      const data = await response.json();
+  
+      // Update state to highlight selected conversation
+      setSelectedConversation({
+        _id: conversationID,
+        conversationName: data.conversation.conversationName,
+        analysis: data.conversation.analysis || {},
+      });
+  
+      setMessages(data.conversation.messages || []);
+    } catch (error) {
+      console.error("Error fetching conversation details:", error);
+    }
+  };
+  
+  
+  
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
@@ -51,24 +120,23 @@ function ChatPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     const formData = new FormData();
-
     const formBetslip = {
       league: league.trim(),
       selectedTeam: { city: selectedTeamCity.trim(), name: selectedTeamName.trim() },
       opposingTeam: { city: opposingTeamCity.trim(), name: opposingTeamName.trim() },
       date: date.trim(),
     };
-
-    formData.append("formBetslip", JSON.stringify(formBetslip))
-
-    // Append each file to formData
-    selectedFiles.forEach((file, index) => {
+  
+    formData.append("formBetslip", JSON.stringify(formBetslip));
+  
+    selectedFiles.forEach((file) => {
       formData.append("file", file);
     });
-
-    setLoading(true); // Start loading
+  
+    setLoading(true);
+  
     try {
       const response = await fetch("http://localhost:3000/betslip", {
         method: "POST",
@@ -77,30 +145,43 @@ function ChatPage() {
         },
         body: formData,
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         if (response.status === 401) {
           alert("Session expired. Please log in again.");
           window.location.href = "/login";
         } else {
-          throw new Error(
-            errorData.message || "Failed to submit the bet slip."
-          );
+          throw new Error(errorData.message || "Failed to submit the bet slip.");
         }
       }
-
+  
       const data = await response.json();
-      localStorage.setItem("currentConversationID", data.conversationID); // Save token to localStorage
-      setResponseMessage(data.analysis);
-      console.log(localStorage.getItem("currentConversationID"))
+  
+      // Store conversation ID
+      localStorage.setItem("currentConversationID", data.conversationID);
+  
+      // Auto-select the new conversation immediately
+      setSelectedConversation({
+        _id: data.conversationID,
+        conversationName: data.conversationName,
+        analysis: data.analysis || {},
+      });
+  
+      setMessages([{ role: "assistant", content: data.analysis }]);
+  
+      // Fetch updated conversations from the backend to update the sidebar properly
+      await fetchConversations();
+  
     } catch (error) {
       console.error("Error submitting bet slip:", error.message);
       alert(error.message);
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
     }
   };
+  
+  
 
   const formatSectionName = (name) => {
     let formattedName = name
@@ -131,9 +212,17 @@ function ChatPage() {
         <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
           SharpAI
         </h1>
-        <button className="btn btn-primary mb-3" style={styles.newChatButton}>
+        <button
+          onClick={() => {
+            setSelectedConversation(null);
+            setMessages([]);
+          }}
+          className="btn btn-primary mb-3"
+          style={styles.newChatButton}
+        >
           + New Chat
         </button>
+
         <button
           onClick={handleLogout}
           className="btn btn-outline-primary mb-3"
@@ -150,51 +239,108 @@ function ChatPage() {
         </button>
         <div style={styles.recentChats}>
           <h2 className="fs-6 mb-2" style={styles.recentTitle}>
-            Recent
+            Recent Conversations
           </h2>
-          <div
-            className="d-flex align-items-center p-2"
-            style={styles.chatItem}
-          >
-            <div className="me-2" style={styles.chatIcon}>
-              📄
-            </div>
-            <span className="text-white" style={styles.chatText}>
-              Toronto Raptors to Win
-            </span>
-          </div>
-          {/* ... other recent chat items ... */}
+          {conversations.length === 0 ? (
+            <p style={{ color: "#bbb", fontSize: "14px" }}>No previous conversations</p>
+          ) : (
+            conversations.map((conv) => (
+              <div
+                key={conv._id}
+                className="d-flex align-items-center p-2"
+                style={{
+                  ...styles.chatItem,
+                  backgroundColor: selectedConversation?._id === conv._id ? "#1A73E8" : "transparent", // Highlight selected
+                  color: selectedConversation?._id === conv._id ? "#fff" : "#ccc",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2C3E50")} // Hover effect
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = selectedConversation?._id === conv._id ? "#1A73E8" : "transparent")}
+                onClick={() => handleSelectConversation(conv._id)}
+              >
+                <div className="me-2" style={styles.chatIcon}>📄</div>
+                <span className="text-white" style={styles.chatText}>
+                  {conv.conversationName}
+                </span>
+              </div>
+            ))
+          )}
         </div>
+
       </div>
 
       {/* Main Chat Window */}
-      <div
-        className="flex-grow-1 d-flex flex-column justify-content-between align-items-center p-4"
-        style={styles.chatWindow}
-      >
+      <div className="flex-grow-1 d-flex flex-column justify-content-between align-items-center p-4" style={styles.chatWindow}>
         <div className="text-center mb-auto" style={styles.welcomeContainer}>
-          <img
-            src={chatLogo}
-            alt="Chat Logo"
-            className="mb-4"
-            style={styles.chatLogo}
-          />
+          <img src={chatLogo} alt="Chat Logo" className="mb-4" style={styles.chatLogo} />
           <h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
             Hello, {userName ? userName : "Guest"}✨
           </h2>
-          <p className="fs-5" style={styles.subMessage}>
-            Enter your bet details below:
-          </p>
+          <p className="fs-5" style={styles.subMessage}>Enter your bet details below:</p>
         </div>
+
         {loading ? (
           <div style={styles.loadingContainer}>
             <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
             <p style={styles.loadingText}>Analyzing your bet...</p>
           </div>
+        ) : selectedConversation && selectedConversation.analysis? (
+          // Display past conversation messages if selected
+          <div className="mt-3" style={{ width: "100%" }}>
+            <h3>{selectedConversation.conversationName}</h3>
+            <h4>Analysis:</h4>
+            <div className="response-text">
+              {Object.entries(selectedConversation.analysis).map(([key, value]) => (
+                <div key={key}>
+                  <strong>{formatSectionName(key)}:</strong>
+                  <p>{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <h4>Messages:</h4>
+            <div className="chat-messages-container" style={{ width: "100%", maxHeight: "500px", overflowY: "auto" }}>
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  style={{
+                    textAlign: msg.role === "user" ? "right" : "left",
+                    margin: "10px 0",
+                  }}
+                >
+                  <span
+                    style={{
+                      backgroundColor: msg.role === "user" ? "#0066ff" : "#333",
+                      color: "#fff",
+                      padding: "10px",
+                      borderRadius: "8px",
+                      display: "inline-block",
+                      maxWidth: "60%",
+                    }}
+                  >
+                    {/* Convert object messages to readable text */}
+                    {typeof msg.content === "object" ? (
+                      <div>
+                        {Object.entries(msg.content).map(([key, value]) => (
+                          <div key={key}>
+                            <strong>{key}:</strong>
+                            <p>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+             
+            </div>
         ) : (
+          // Show the regular bet submission form when no past conversation is selected
           <form onSubmit={handleSubmit} style={styles.formContainer}>
             <div style={styles.inputsWrapper}>
-              {/* Left side - Input fields */}
               <div style={styles.inputSection}>
                 <input
                   type="text"
@@ -240,15 +386,11 @@ function ChatPage() {
                 />
               </div>
 
-              {/* Right side - File upload */}
               <div style={styles.fileSection}>
                 <div style={styles.fileUploadContainer}>
                   <label htmlFor="file-upload" style={styles.fileUploadLabel}>
                     <div style={styles.uploadBox}>
-                      <i
-                        className="fas fa-cloud-upload-alt"
-                        style={styles.uploadIcon}
-                      ></i>
+                      <i className="fas fa-cloud-upload-alt" style={styles.uploadIcon}></i>
                       <span>Drop screenshots here or click to upload</span>
                       <span style={styles.fileInfo}>
                         {selectedFiles.length > 0
@@ -267,7 +409,6 @@ function ChatPage() {
                   />
                 </div>
 
-                {/* File List */}
                 {selectedFiles.length > 0 && (
                   <div style={styles.fileList}>
                     {selectedFiles.map((file, index) => (
@@ -291,32 +432,15 @@ function ChatPage() {
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={styles.submitButton}
-            >
+            <button type="submit" className="btn btn-primary" style={styles.submitButton}>
               Submit
             </button>
           </form>
         )}
       </div>
 
-      {responseMessage && (
-        <div className="mt-3">
-          <h3>Analysis:</h3>
-          <div className="response-text">
-            {/* Render each piece of the response on a new line */}
-            {Object.entries(responseMessage).map(([key, value]) => (
-              <div key={key}>
-                <strong>{formatSectionName(key)}:</strong>
-                <p>{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      </div>
+
   );
 }
 
