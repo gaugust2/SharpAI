@@ -1,10 +1,10 @@
 const axios = require('axios')
 const config = require('./config')
-const { gameFieldsToRemove, playerFieldsToRemove, selectedGameFieldsToRemove } = require('./fieldsToRemove')
+const { gameFieldsToRemove, playerFieldsToRemove, projectionsFieldsToRemove } = require('./utils/fieldsToRemove')
 
 const { nflEndpoints,
     nbaEndpoints,
-    mlbEndpoints } = require('./apiEndpoints')
+    mlbEndpoints } = require('./utils/apiEndpoints')
 
 //Below are acceptable date formats from the user. Anything else will result in an error
 //October 22 2024
@@ -145,20 +145,29 @@ async function sportsDataIOController(betslip){
         //selectedTeamInjuries and opposingTeamInjuries will be used for analysis on which team is shorthanded
 
 
+        //Baker projections needs to be in its own try-catch block because sometimes they aren't available yet, 
+        //and it sends a 404 and breaks our app.
+        let projectionsData = {}
+        try {
+            const projections = await axios.get(endpoints.bakerProjections(gameID), {
+                headers: {
+                    'Ocp-Apim-Subscription-Key': config.SPORTS_DATA_API_KEY
+                }
+            });
 
-
-
-
-        const projections = await axios.get(endpoints.bakerProjections(gameID), {
-            headers: {
-                'Ocp-Apim-Subscription-Key': config.SPORTS_DATA_API_KEY
+            projectionsFieldsToRemove.forEach(field => delete projections.data[field]);
+            projectionsData = projections.data; // Assign projections data if the request is successful
+            //The BAKER game projections will inform the analysis of the expected winner
+        } catch (error) {
+            if (error.response && error.response.status === 404) {
+                console.warn(`Projections not found for gameID: ${gameID}, returning empty projections.`);
+            } else {
+                throw error;
             }
-        });
+        }
 
-        selectedGameFieldsToRemove.forEach(field => delete projections.data[field]);
-        //The BAKER game projections will inform the analysis of the expected winner
 
-        return [selectedTeamLast5Games.data, opposingTeamLast5Games.data, selectedTeamInjuries, opposingTeamInjuries, projections.data]
+        return [selectedTeamLast5Games.data, opposingTeamLast5Games.data, selectedTeamInjuries, opposingTeamInjuries, projectionsData]
 
     } catch (error) {
         console.error(error);

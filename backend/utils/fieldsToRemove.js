@@ -1,3 +1,5 @@
+//The arrays in this file state all additional fields that need to be removed from SportsDataIO API responses(they give alot of fields we don't need)
+
 const gameFieldsToRemove = [
     "StatID",
     "TeamID",
@@ -145,6 +147,11 @@ const gameFieldsToRemove = [
     "OpponentFieldGoalReturnYards",
     "OpponentFieldGoalReturnTouchdowns",
     "OpponentPuntNetYards",
+    "PlusMinus",
+    "Minutes",
+    "Seconds",
+    "GameKey",
+    "Week"
 ];
 
 const playerFieldsToRemove = [
@@ -185,10 +192,35 @@ const playerFieldsToRemove = [
     "UsaTodayHeadshotNoBackgroundUrl", 
     "UsaTodayHeadshotUpdated", 
     "UsaTodayHeadshotNoBackgroundUpdated", 
-    "NbaDotComPlayerID"
+    "NbaDotComPlayerID",
+    "Number",
+    "FantasyPosition",
+    "BirthDateString",
+    "ShortName",
+    "CurrentTeam",
+    "CollegeDraftTeam",
+    "CollegeDraftYear",
+    "CollegeDraftRound",
+    "CollegeDraftPick",
+    "IsUndraftedFreeAgent",
+    "UpcomingOpponentRank",
+    "UpcomingOpponentPositionRank",
+    "UpcomingFanDuelSalary",
+    "UpcomingDraftKingsSalary",
+    "UpcomingYahooSalary",
+    "ByeWeek",
+    "UpcomingGameOpponent",
+    "UpcomingGameWeek",
+    "UpcomingSalary",
+    "FantasyPositionDepthOrder"
 ];
 
-const selectedGameFieldsToRemove = [
+const projectionsFieldsToRemove = [
+    "season",
+    "week_name",
+    "away_team",
+    "home_team",
+    "last_updated",
     "day",
     "date",
     "over_under",
@@ -200,4 +232,4 @@ const selectedGameFieldsToRemove = [
 ]
 
 
-module.exports = { gameFieldsToRemove, playerFieldsToRemove, selectedGameFieldsToRemove }
+module.exports = { gameFieldsToRemove, playerFieldsToRemove, projectionsFieldsToRemove }
