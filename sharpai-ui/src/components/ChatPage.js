@@ -590,44 +590,10 @@ function ChatPage() {
             </button>
           </form>
         )}
-
-        {/* Chat with AI Section */}
-        <div className="mt-4" style={styles.chatContainer}>
-          <h3>Chat with SharpAI</h3>
-          <div style={styles.chatMessages}>
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                style={
-                  msg.role === "user"
-                    ? styles.userMessage
-                    : styles.assistantMessage
-                }
-              >
-                {msg.content}
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div style={styles.chatInput}>
-            <input
-              type="text"
-              placeholder="Type your message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              style={styles.input}
-            />
-            <button onClick={sendMessage} style={styles.sendButton}>
-              Send
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   );
 }
-
 const styles = {
   container: {
     backgroundColor: "#0C111B",
