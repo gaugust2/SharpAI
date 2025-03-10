@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import chatLogo from "../assets/Frame 1216258384.svg";
 import { jwtDecode } from "jwt-decode";
@@ -15,13 +15,79 @@ function ChatPage() {
   const [responseMessage, setResponseMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  // Chat states
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false); // Track if a message is being sent
+  const messagesEndRef = useRef(null);
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
   };
 
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/conversationNames", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch conversations.");
+      }
+
+      const data = await response.json();
+
+      setConversations(data.conversations.reverse());
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    }
+  };
+
+  const handleDeleteConversation = async (conversationID) => {
+    if (!window.confirm("Are you sure you want to delete this conversation?"))
+      return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/deleteConversation/${conversationID}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete conversation.");
+      }
+
+      // Remove from state to update UI
+      setConversations((prev) =>
+        prev.filter((conv) => conv._id !== conversationID)
+      );
+
+      // If deleted chat was selected, clear it from the chat window
+      if (selectedConversation?._id === conversationID) {
+        setSelectedConversation(null);
+        setMessages([]);
+        localStorage.removeItem("currentConversationID");
+      }
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      alert("Failed to delete conversation. Please try again.");
+    }
+  };
+
   useEffect(() => {
+    // Fetch previous conversations
+    fetchConversations();
     // Check for stored analysis when component mounts
     const storedAnalysis = localStorage.getItem("betAnalysis");
     if (storedAnalysis) {
@@ -44,6 +110,35 @@ function ChatPage() {
     }
   }, []);
 
+  const handleSelectConversation = async (conversationID) => {
+    try {
+      const response = await fetch("http://localhost:3000/conversation", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "conversation-id": conversationID,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch conversation details.");
+      }
+
+      const data = await response.json();
+
+      // Update state to highlight selected conversation
+      setSelectedConversation({
+        _id: conversationID,
+        conversationName: data.conversation.conversationName,
+        analysis: data.conversation.analysis || {},
+      });
+
+      setMessages(data.conversation.messages || []);
+    } catch (error) {
+      console.error("Error fetching conversation details:", error);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
@@ -52,19 +147,8 @@ function ChatPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      !league ||
-      !selectedTeamCity ||
-      !selectedTeamName ||
-      !opposingTeamCity ||
-      !opposingTeamName ||
-      !date
-    ) {
-      alert("Please fill in all fields.");
-      return;
-    }
-
-    const betDetails = {
+    const formData = new FormData();
+    const formBetslip = {
       league: league.trim(),
       selectedTeam: {
         city: selectedTeamCity.trim(),
@@ -77,16 +161,21 @@ function ChatPage() {
       date: date.trim(),
     };
 
-    setLoading(true); // Start loading
+    formData.append("formBetslip", JSON.stringify(formBetslip));
+
+    selectedFiles.forEach((file) => {
+      formData.append("file", file);
+    });
+
+    setLoading(true);
 
     try {
       const response = await fetch("http://localhost:3000/betslip", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(betDetails),
+        body: formData,
       });
 
       if (!response.ok) {
@@ -102,16 +191,97 @@ function ChatPage() {
       }
 
       const data = await response.json();
-      localStorage.setItem("currentConversationID", data.conversationID); // Save token to localStorage
-      setResponseMessage(data.analysis);
-      console.log(localStorage.getItem("currentConversationID"))
+
+      // Store conversation ID
+      localStorage.setItem("currentConversationID", data.conversationID);
+
+      // Auto-select the new conversation immediately
+      setSelectedConversation({
+        _id: data.conversationID,
+        conversationName: data.conversationName,
+        analysis: data.analysis || {},
+      });
+
+      setMessages([{ role: "assistant", content: data.analysis }]);
+
+      // Fetch updated conversations from the backend to update the sidebar properly
+      await fetchConversations();
     } catch (error) {
       console.error("Error submitting bet slip:", error.message);
       alert(error.message);
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const conversationID = localStorage.getItem("currentConversationID");
+    if (!conversationID) return;
+
+    fetch(`http://localhost:3000/conversation`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "conversation-id": conversationID,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.conversation) {
+          setMessages(data.conversation.messages);
+        }
+      })
+      .catch((error) => console.error("Error fetching messages:", error));
+  }, []);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || isSending) return; // Prevent sending if already sending or empty message
+
+    setIsSending(true); // Set sending state to true
+    const userMessage = { role: "user", content: newMessage };
+    const tempMessages = [...messages, userMessage]; // Temporarily add user message
+    setMessages(tempMessages); // Update UI immediately
+    setNewMessage(""); // Clear input
+
+    try {
+      const conversationID = localStorage.getItem("currentConversationID");
+      const response = await fetch("http://localhost:3000/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "conversation-id": conversationID,
+        },
+        body: JSON.stringify({ message: newMessage }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data); // Debugging: Log the API response
+
+      if (data && data.response) {
+        // Add AI response to messages
+        setMessages([
+          ...tempMessages,
+          { role: "assistant", content: data.response },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Revert the messages state if the API call fails
+      setMessages(messages); // Restore previous messages
+    } finally {
+      setIsSending(false); // Reset sending state
+    }
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const formatSectionName = (name) => {
     let formattedName = name
@@ -142,9 +312,17 @@ function ChatPage() {
         <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
           SharpAI
         </h1>
-        <button className="btn btn-primary mb-3" style={styles.newChatButton}>
+        <button
+          onClick={() => {
+            setSelectedConversation(null);
+            setMessages([]);
+          }}
+          className="btn btn-primary mb-3"
+          style={styles.newChatButton}
+        >
           + New Chat
         </button>
+
         <button
           onClick={handleLogout}
           className="btn btn-outline-primary mb-3"
@@ -161,20 +339,65 @@ function ChatPage() {
         </button>
         <div style={styles.recentChats}>
           <h2 className="fs-6 mb-2" style={styles.recentTitle}>
-            Recent
+            Recent Conversations
           </h2>
-          <div
-            className="d-flex align-items-center p-2"
-            style={styles.chatItem}
-          >
-            <div className="me-2" style={styles.chatIcon}>
-              📄
-            </div>
-            <span className="text-white" style={styles.chatText}>
-              Toronto Raptors to Win
-            </span>
-          </div>
-          {/* ... other recent chat items ... */}
+          {conversations.length === 0 ? (
+            <p style={{ color: "#bbb", fontSize: "14px" }}>
+              No previous conversations
+            </p>
+          ) : (
+            conversations.map((conv) => (
+              <div
+                key={conv._id}
+                className="d-flex justify-content-between align-items-center p-2"
+                style={{
+                  ...styles.chatItem,
+                  backgroundColor:
+                    selectedConversation?._id === conv._id
+                      ? "#1A73E8"
+                      : "transparent",
+                }}
+                onMouseEnter={(e) => {
+                  if (!e.currentTarget.querySelector(".delete-btn:hover")) {
+                    e.currentTarget.style.backgroundColor = "#2C3E50";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    selectedConversation?._id === conv._id
+                      ? "#1A73E8"
+                      : "transparent";
+                }}
+              >
+                <div
+                  onClick={() => handleSelectConversation(conv._id)}
+                  className="d-flex align-items-center flex-grow-1"
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="me-2" style={styles.chatIcon}>
+                    📄
+                  </div>
+                  <span className="text-white" style={styles.chatText}>
+                    {conv.conversationName}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => handleDeleteConversation(conv._id)}
+                  className="delete-btn"
+                  style={styles.deleteButton}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.color = "#ff3333")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.color = "#ff4d4d")
+                  }
+                >
+                  🗑️
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -197,15 +420,73 @@ function ChatPage() {
             Enter your bet details below:
           </p>
         </div>
+
         {loading ? (
           <div style={styles.loadingContainer}>
             <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
             <p style={styles.loadingText}>Analyzing your bet...</p>
           </div>
+        ) : selectedConversation && selectedConversation.analysis ? (
+          // Display past conversation messages if selected
+          <div className="mt-3" style={{ width: "100%" }}>
+            <h3>{selectedConversation.conversationName}</h3>
+            <h4>Analysis:</h4>
+            <div className="response-text">
+              {Object.entries(selectedConversation.analysis).map(
+                ([key, value]) => (
+                  <div key={key}>
+                    <strong>{formatSectionName(key)}:</strong>
+                    <p>{value}</p>
+                  </div>
+                )
+              )}
+            </div>
+
+            <h4>Messages:</h4>
+            <div
+              className="chat-messages-container"
+              style={{ width: "100%", maxHeight: "500px", overflowY: "auto" }}
+            >
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  style={{
+                    textAlign: msg.role === "user" ? "right" : "left",
+                    margin: "10px 0",
+                  }}
+                >
+                  <span
+                    style={{
+                      backgroundColor: msg.role === "user" ? "#0066ff" : "#333",
+                      color: "#fff",
+                      padding: "10px",
+                      borderRadius: "8px",
+                      display: "inline-block",
+                      maxWidth: "60%",
+                    }}
+                  >
+                    {/* Convert object messages to readable text */}
+                    {typeof msg.content === "object" ? (
+                      <div>
+                        {Object.entries(msg.content).map(([key, value]) => (
+                          <div key={key}>
+                            <strong>{key}:</strong>
+                            <p>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         ) : (
+          // Show the regular bet submission form when no past conversation is selected
           <form onSubmit={handleSubmit} style={styles.formContainer}>
             <div style={styles.inputsWrapper}>
-              {/* Left side - Input fields */}
               <div style={styles.inputSection}>
                 <input
                   type="text"
@@ -213,7 +494,6 @@ function ChatPage() {
                   value={league}
                   onChange={(e) => setLeague(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -221,7 +501,6 @@ function ChatPage() {
                   value={selectedTeamCity}
                   onChange={(e) => setSelectedTeamCity(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -229,7 +508,6 @@ function ChatPage() {
                   value={selectedTeamName}
                   onChange={(e) => setSelectedTeamName(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -237,7 +515,6 @@ function ChatPage() {
                   value={opposingTeamCity}
                   onChange={(e) => setOpposingTeamCity(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -245,7 +522,6 @@ function ChatPage() {
                   value={opposingTeamName}
                   onChange={(e) => setOpposingTeamName(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
                 <input
                   type="text"
@@ -253,11 +529,9 @@ function ChatPage() {
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   style={styles.inputBox}
-                  required
                 />
               </div>
 
-              {/* Right side - File upload */}
               <div style={styles.fileSection}>
                 <div style={styles.fileUploadContainer}>
                   <label htmlFor="file-upload" style={styles.fileUploadLabel}>
@@ -284,7 +558,6 @@ function ChatPage() {
                   />
                 </div>
 
-                {/* File List */}
                 {selectedFiles.length > 0 && (
                   <div style={styles.fileList}>
                     {selectedFiles.map((file, index) => (
@@ -318,21 +591,6 @@ function ChatPage() {
           </form>
         )}
       </div>
-
-      {responseMessage && (
-        <div className="mt-3">
-          <h3>Analysis:</h3>
-          <div className="response-text">
-            {/* Render each piece of the response on a new line */}
-            {Object.entries(responseMessage).map(([key, value]) => (
-              <div key={key}>
-                <strong>{formatSectionName(key)}:</strong>
-                <p>{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -341,6 +599,8 @@ const styles = {
   container: {
     backgroundColor: "#0C111B",
     color: "#ffffff",
+    display: "flex",
+    minHeight: "100vh",
   },
   sidebar: {
     width: "300px",
@@ -362,7 +622,29 @@ const styles = {
     fontWeight: "bold",
     marginBottom: "30px",
   },
+  settingsButton: {
+    backgroundColor: "#ffffff",
+    color: "#0066ff",
+    padding: "10px 20px",
+    borderRadius: "5px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "bold",
+    marginBottom: "30px",
+  },
   logoutButton: {
+    backgroundColor: "#ffffff",
+    color: "#0066ff",
+    padding: "10px 20px",
+    borderRadius: "5px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "bold",
+    marginBottom: "30px",
+  },
+  uploadHistoryButton: {
     backgroundColor: "#ffffff",
     color: "#0066ff",
     padding: "10px 20px",
@@ -569,6 +851,50 @@ const styles = {
     border: "none",
     cursor: "pointer",
     marginRight: "10px",
+  },
+  analysisContainer: {
+    width: "100%",
+    maxWidth: "800px",
+    margin: "0 auto",
+    padding: "20px",
+    backgroundColor: "#1C2639",
+    borderRadius: "10px",
+  },
+  chatContainer: {
+    width: "100%",
+    maxWidth: "800px",
+    margin: "0 auto",
+    padding: "20px",
+    backgroundColor: "#1C2639",
+    borderRadius: "10px",
+  },
+  chatMessages: {
+    maxHeight: "300px",
+    overflowY: "auto",
+    marginBottom: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  userMessage: {
+    backgroundColor: "#0066ff",
+    color: "#ffffff",
+    padding: "10px",
+    borderRadius: "10px",
+    alignSelf: "flex-end",
+    maxWidth: "70%",
+  },
+  assistantMessage: {
+    backgroundColor: "#2C3E50",
+    color: "#ffffff",
+    padding: "10px",
+    borderRadius: "10px",
+    alignSelf: "flex-start",
+    maxWidth: "70%",
+  },
+  chatInput: {
+    display: "flex",
+    gap: "10px",
   },
   input: {
     flex: 1,

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function SignUp() {
   const [email, setEmail] = useState("");
@@ -9,6 +9,12 @@ function SignUp() {
   const [bettingBudget, setBettingBudget] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check local storage for ToS acceptance
+    const tosStatus = localStorage.getItem('tosAccepted') === 'true';
+    setTermsAccepted(tosStatus);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,8 +45,9 @@ function SignUp() {
 
       if (response.ok) {
         alert(data.message);
-        localStorage.setItem("token", data.token); // save token locally
-        navigate("/chat"); // go to chat
+        localStorage.setItem('token', data.token); // Save token locally
+        navigate('/chat'); // Navigate to chat
+        localStorage.removeItem('tosAccepted'); // Clear ToS status
       } else {
         alert(data.message);
       }
@@ -131,9 +138,12 @@ function SignUp() {
             style={styles.checkbox}
             className="form-check-input"
           />
-          <span style={styles.checkboxText} className="ms-2">
-            I accept SharpAI{" "}
-            <a href="/" style={styles.link}>
+          <span style={styles.checkboxText}>
+            I accept SharpAI{' '}
+            <a
+              onClick={() => navigate('/terms')}
+              style={styles.link}
+            >
               Terms & Conditions
             </a>
           </span>
@@ -167,13 +177,13 @@ const styles = {
     padding: "20px",
   },
   form: {
-    width: "100%",
-    maxWidth: "400px",
-    backgroundColor: "#071730",
-    padding: "30px",
-    borderRadius: "10px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
-    boxSizing: "border-box",
+    width: '100%',
+    maxWidth: '400px',
+    backgroundColor: '#071730',
+    padding: '30px',
+    borderRadius: '10px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
+    boxSizing: 'border-box',
   },
   header: {
     fontSize: "24px",
@@ -225,9 +235,10 @@ const styles = {
     color: "#bbbbbb",
   },
   link: {
-    color: "#4da6ff",
-    textDecoration: "none",
-    fontWeight: "bold",
+    color: '#4da6ff',
+    textDecoration: 'none',
+    fontWeight: 'bold',
+    cursor: 'pointer',
   },
   button: {
     width: "100%",

@@ -2,7 +2,12 @@ const express = require("express");
 const app = express();
 const axios = require("axios");
 const config = require("./config");
-const { getAnalysis, getAIResponse } = require("./openaiService");
+const {
+  getAnalysis,
+  getAIResponse,
+  getAIStructuredResponse,
+} = require("./openaiService");
+const { analysisToString, mergeBetslips, checkEmptyFields } = require("./utils/helpers")
 const { sportsDataIOController } = require("./sportsDataIOService");
 const { authenticateToken } = require("./middleware");
 const mongoose = require("mongoose");
@@ -13,14 +18,17 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.json());
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
+const multer = require("multer");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, "build")));
+const upload = multer({ dest: "uploads/" });
 
 mongoose
-  .connect(process.env.MONGO_URI, {
+  .connect(config.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
@@ -62,14 +70,6 @@ const Conversation = mongoose.model(
   conversationSchema,
   "Conversations"
 );
-
-const analysisToString = (analysis) => {
-  const analysisString = Object.entries(analysis)
-    .map(([key, value]) => `${key}: \n${value}`)
-    .join("\n\n");
-
-  return analysisString;
-};
 
 // Routes
 app.post("/signup", async (req, res) => {
@@ -143,35 +143,63 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.post("/betslip", authenticateToken, async (req, res) => {
+app.delete("/deleteConversation/:conversationID", authenticateToken, async (req, res) => {
   try {
-    // Step 1: Validate incoming betslip data
-    const { league, selectedTeam, opposingTeam, date } = req.body;
-    if (!league || !selectedTeam || !opposingTeam || !date) {
-      return res
-        .status(400)
-        .json({ message: "Missing required fields in betslip" });
-    }
+    const { conversationID } = req.params;
 
-    if (
-      !selectedTeam.city ||
-      !selectedTeam.name ||
-      !opposingTeam.city ||
-      !opposingTeam.name
-    ) {
-      return res.status(400).json({
-        message: "Selected team or opposing team is missing city or name.",
-      });
-    }
-
-    console.log("Received betslip:", {
-      league,
-      selectedTeam,
-      opposingTeam,
-      date,
+    // Ensure the conversation belongs to the user before deleting
+    const deletedConversation = await Conversation.findOneAndDelete({
+      _id: conversationID,
+      userID: req.user.id,
     });
 
-    // Step 2: Call sportsDataIOController to process the betslip
+    if (!deletedConversation) {
+      return res.status(404).json({ message: "Conversation not found or unauthorized" });
+    }
+
+    res.json({ message: "Conversation deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    res.status(500).json({ message: "Failed to delete conversation" });
+  }
+});
+
+app.post("/betslip", upload.single("file"), authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Parse the form betslip & photo uploaded betslip
+    let formBetslip = req.body.formBetslip;
+    if (formBetslip) {
+        formBetslip = JSON.parse(formBetslip);
+    }
+
+    let imageBetslip;
+    if (req.file) {
+      let base64Image = null;
+
+      const filePath = req.file.path;
+
+      base64Image = fs.readFileSync(filePath, { encoding: "base64" });
+      fs.unlinkSync(filePath);
+
+      if (!base64Image) {
+        return res.status(400).json({ error: "Could not parse image" });
+      }
+
+      imageBetslip = JSON.parse(await getAIStructuredResponse(base64Image));
+    }
+
+    // Step 2: Merge the parsed betslips and check for missing fields
+    const mergedBetslip = mergeBetslips(formBetslip, imageBetslip)
+    const message = checkEmptyFields(mergedBetslip); //Return either an empty string, or an error string
+
+    if(message) {
+      return res.status(400).json({ message }) //If theres an empty field in the merged object, tell the user to fill in the missing fields in the form
+    }
+
+    console.log("Received betslip: ", { mergedBetslip });
+    const { league, selectedTeam, opposingTeam, date } = mergedBetslip;
+
+    // Step 3: Call sportsDataIOController to process the betslip
     const externalData = await sportsDataIOController({
       league,
       selectedTeam,
@@ -185,7 +213,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       });
     }
 
-    // Step 3: Perform analysis with the external data
+    // Step 4: Perform analysis with the external data
     const analysis = await getAnalysis(
       { selectedTeam, opposingTeam },
       externalData
@@ -195,19 +223,23 @@ app.post("/betslip", authenticateToken, async (req, res) => {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
-    // Step 4: Create name for new conversation
-    const title = await getAIResponse([
-      {
-        role: "system", 
-        content: "Provide a 3-5 word conclusion based on the analysis provided."
-      },
-      {
-        role: "assistant",
-        content: analysisToString(analysis)
-      }
-    ], 0.9)
+    // Step 5: Create name for new conversation
+    const title = await getAIResponse(
+      [
+        {
+          role: "system",
+          content:
+            "Provide a 3-5 word conclusion based on the analysis provided.",
+        },
+        {
+          role: "assistant",
+          content: analysisToString(analysis),
+        },
+      ],
+      0.9
+    );
 
-    // Step 5: Create new Conversation in MongoDB
+    // Step 6: Create new Conversation in MongoDB
     const newConversation = new Conversation({
       conversationName: `${title} - ${date}`,
       userID: req.user.id,
@@ -217,7 +249,7 @@ app.post("/betslip", authenticateToken, async (req, res) => {
 
     console.log("Analysis generated:", analysis);
 
-    // Step 6: Respond with the analysis result
+    // Step 7: Respond with the analysis result
     res.status(200).json({ conversationID, analysis });
   } catch (error) {
     console.error("Error in /betslip:", error.message);
@@ -232,8 +264,8 @@ app.post("/chat", authenticateToken, async (req, res) => {
     // Step 1: Check headers for conversation ID
     const conversationID = req.headers["conversation-id"];
 
-    if(!conversationID) {
-      return res.status(400).json({ error: "Header missing conversation-id"});
+    if (!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id" });
     }
 
     // Step 2: Validate incoming data
@@ -252,7 +284,7 @@ app.post("/chat", authenticateToken, async (req, res) => {
     );
 
     // Step 4: Prepare/process the data for OpenAI
-    const analysisString = analysisToString(updatedConversation.analysis)
+    const analysisString = analysisToString(updatedConversation.analysis);
 
     const messages = [
       {
@@ -292,39 +324,49 @@ app.post("/chat", authenticateToken, async (req, res) => {
 app.get("/conversationNames", authenticateToken, async (req, res) => {
   try {
     // Step 1: Query MongoDB for list of conversation names using userID
-    const conversations = await Conversation.find({ userID: req.user.id }, "_id conversationName").exec()
+    const conversations = await Conversation.find(
+      { userID: req.user.id },
+      "_id conversationName"
+    ).exec();
 
     // Step 2: Respond with the list of the user's conversations
-    res.json({ conversations })
+    res.json({ conversations });
   } catch (error) {
     console.error("Error in /conversationNames:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to return conversation names: ${error.message}` });
+      .json({
+        message: `Failed to return conversation names: ${error.message}`,
+      });
   }
-})
+});
 
 app.get("/conversation", authenticateToken, async (req, res) => {
   try {
     // Step 1: Check headers for conversation ID
     const conversationID = req.headers["conversation-id"];
 
-    if(!conversationID) {
-      return res.status(400).json({ error: "Header missing conversation-id"});
+    if (!conversationID) {
+      return res.status(400).json({ error: "Header missing conversation-id" });
     }
 
     // Step 2: Query MongoDB for full conversation
-    const conversation = await Conversation.findById(conversationID, 'analysis messages').exec()
+    const conversation = await Conversation.findById(
+      conversationID,
+      "analysis messages"
+    ).exec();
 
     // Step 3: Respond with the analysis and array of messages
-    res.json({ conversation })
+    res.json({ conversation });
   } catch (error) {
     console.error("Error in /conversationNames:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to return conversation names: ${error.message}` });
+      .json({
+        message: `Failed to return conversation names: ${error.message}`,
+      });
   }
-})
+});
 
 app.delete("/deleteConversations", authenticateToken, async (req, res) => {
   try {
