@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import chatLogo from "../assets/Frame 1216258384.svg";
 import { jwtDecode } from "jwt-decode";
@@ -15,6 +15,11 @@ function ChatPage() {
   const [responseMessage, setResponseMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  // Chat states
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false); // Track if a message is being sent
+  const messagesEndRef = useRef(null);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -136,7 +141,6 @@ function ChatPage() {
   
   
   
-
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
@@ -145,6 +149,7 @@ function ChatPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
   
+
     const formData = new FormData();
     const formBetslip = {
       league: league.trim(),
@@ -196,7 +201,6 @@ function ChatPage() {
   
       // Fetch updated conversations from the backend to update the sidebar properly
       await fetchConversations();
-  
     } catch (error) {
       console.error("Error submitting bet slip:", error.message);
       alert(error.message);
@@ -204,6 +208,74 @@ function ChatPage() {
       setLoading(false);
     }
   };
+
+
+  useEffect(() => {
+    const conversationID = localStorage.getItem("currentConversationID");
+    if (!conversationID) return;
+
+    fetch(`http://localhost:3000/conversation`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        "conversation-id": conversationID,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.conversation) {
+          setMessages(data.conversation.messages);
+        }
+      })
+      .catch((error) => console.error("Error fetching messages:", error));
+  }, []);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || isSending) return; // Prevent sending if already sending or empty message
+
+    setIsSending(true); // Set sending state to true
+    const userMessage = { role: "user", content: newMessage };
+    const tempMessages = [...messages, userMessage]; // Temporarily add user message
+    setMessages(tempMessages); // Update UI immediately
+    setNewMessage(""); // Clear input
+
+    try {
+      const conversationID = localStorage.getItem("currentConversationID");
+      const response = await fetch("http://localhost:3000/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "conversation-id": conversationID,
+        },
+        body: JSON.stringify({ message: newMessage }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const data = await response.json();
+      console.log("API Response:", data); // Debugging: Log the API response
+
+      if (data && data.response) {
+        // Add AI response to messages
+        setMessages([...tempMessages, { role: "assistant", content: data.response }]);
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Revert the messages state if the API call fails
+      setMessages(messages); // Restore previous messages
+    } finally {
+      setIsSending(false); // Reset sending state
+    }
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   
   
 
@@ -229,10 +301,22 @@ function ChatPage() {
     return formattedName;
   };
 
+
   return (
     <div className="d-flex min-vh-100" style={styles.container}>
       {/* Sidebar */}
       <div className="d-flex flex-column p-3" style={styles.sidebar}>
+        <h1 className="fs-4 fw-bold mb-4" style={styles.title}>SharpAI</h1>
+        <button className="btn btn-primary mb-3" style={styles.newChatButton}>
+          + New Chat
+        </button>
+        <button
+          onClick={() => navigate('/settings')}
+          className="btn btn-outline-primary mb-3"
+          style={styles.settingsButton}
+        >
+          Settings
+        </button>
         <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
           SharpAI
         </h1>
@@ -326,6 +410,154 @@ function ChatPage() {
           <div style={styles.loadingContainer}>
             <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
             <p style={styles.loadingText}>Analyzing your bet...</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={styles.formContainer}>
+            <div style={styles.inputsWrapper}>
+              {/* Left side - Input fields */}
+              <div style={styles.inputSection}>
+                <input
+                  type="text"
+                  placeholder="League (e.g., NBA)"
+                  value={league}
+                  onChange={(e) => setLeague(e.target.value)}
+                  style={styles.inputBox}
+                />
+                <input
+                  type="text"
+                  placeholder="Selected Team City"
+                  value={selectedTeamCity}
+                  onChange={(e) => setSelectedTeamCity(e.target.value)}
+                  style={styles.inputBox}
+                />
+                <input
+                  type="text"
+                  placeholder="Selected Team Name"
+                  value={selectedTeamName}
+                  onChange={(e) => setSelectedTeamName(e.target.value)}
+                  style={styles.inputBox}
+                />
+                <input
+                  type="text"
+                  placeholder="Opposing Team City"
+                  value={opposingTeamCity}
+                  onChange={(e) => setOpposingTeamCity(e.target.value)}
+                  style={styles.inputBox}
+                />
+                <input
+                  type="text"
+                  placeholder="Opposing Team Name"
+                  value={opposingTeamName}
+                  onChange={(e) => setOpposingTeamName(e.target.value)}
+                  style={styles.inputBox}
+                />
+                <input
+                  type="text"
+                  placeholder="Date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  style={styles.inputBox}
+                />
+              </div>
+
+              {/* Right side - File upload */}
+              <div style={styles.fileSection}>
+                <div style={styles.fileUploadContainer}>
+                  <label htmlFor="file-upload" style={styles.fileUploadLabel}>
+                    <div style={styles.uploadBox}>
+                      <i className="fas fa-cloud-upload-alt" style={styles.uploadIcon}></i>
+                      <span>Drop screenshots here or click to upload</span>
+                      <span style={styles.fileInfo}>
+                        {selectedFiles.length > 0
+                          ? `${selectedFiles.length} file(s) selected`
+                          : "Supports: JPG, PNG, PDF"}
+                      </span>
+                    </div>
+                  </label>
+                  <input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept="image/*, .pdf"
+                    onChange={handleFileChange}
+                    style={styles.hiddenFileInput}
+                  />
+                </div>
+
+                {/* File List */}
+                {selectedFiles.length > 0 && (
+                  <div style={styles.fileList}>
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} style={styles.fileItem}>
+                        <span>{file.name}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedFiles((files) =>
+                              files.filter((_, i) => i !== index)
+                            )
+                          }
+                          style={styles.removeFileButton}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={styles.submitButton}>
+              Submit
+            </button>
+          </form>
+        )}
+
+        {responseMessage && (
+          <div className="mt-4" style={styles.analysisContainer}>
+            <h3>Analysis:</h3>
+            <div className="response-text">
+              {Object.entries(responseMessage).map(([key, value]) => (
+                <div key={key}>
+                  <strong>{key}:</strong>
+                  <p>{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Chat with AI Section */}
+        <div className="mt-4" style={styles.chatContainer}>
+          <h3>Chat with SharpAI</h3>
+          <div style={styles.chatMessages}>
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                style={
+                  msg.role === "user"
+                    ? styles.userMessage
+                    : styles.assistantMessage
+                }
+              >
+                {msg.content}
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div style={styles.chatInput}>
+            <input
+              type="text"
+              placeholder="Type your message..."
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              style={styles.input}
+            />
+            <button onClick={sendMessage} style={styles.sendButton}>
+              Send
+            </button>
           </div>
         ) : selectedConversation && selectedConversation.analysis? (
           // Display past conversation messages if selected
@@ -492,6 +724,8 @@ const styles = {
   container: {
     backgroundColor: "#0C111B",
     color: "#ffffff",
+    display: "flex",
+    minHeight: "100vh",
   },
   sidebar: {
     width: "300px",
@@ -513,6 +747,17 @@ const styles = {
     fontWeight: "bold",
     marginBottom: "30px",
   },
+  settingsButton: {
+    backgroundColor: "#ffffff",
+    color: "#0066ff",
+    padding: "10px 20px",
+    borderRadius: "5px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "bold",
+    marginBottom: "30px",
+  },
   logoutButton: {
     backgroundColor: "#ffffff",
     color: "#0066ff",
@@ -523,6 +768,18 @@ const styles = {
     fontSize: "14px",
     fontWeight: "bold",
     marginBottom: "30px",
+  },
+  uploadHistoryButton: {
+    backgroundColor: "#ffffff",
+    color: "#0066ff",
+    padding: "10px 20px",
+    borderRadius: "5px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "bold",
+    marginBottom: "30px",
+
   },
   recentChats: {
     marginTop: "20px",
@@ -566,7 +823,7 @@ const styles = {
     fontSize: "14px",
     color: "#ffffff",
   },
-  chatWindow: {
+  mainContent: {
     flex: 1,
     display: "flex",
     flexDirection: "column",
@@ -733,6 +990,49 @@ const styles = {
       backgroundColor: "#0052cc",
     },
   },
+  analysisContainer: {
+    width: "100%",
+    maxWidth: "800px",
+    margin: "0 auto",
+    padding: "20px",
+    backgroundColor: "#1C2639",
+    borderRadius: "10px",
+  },
+  chatContainer: {
+    width: "100%",
+    maxWidth: "800px",
+    margin: "0 auto",
+    padding: "20px",
+    backgroundColor: "#1C2639",
+    borderRadius: "10px",
+  },
+  chatMessages: {
+    maxHeight: "300px",
+    overflowY: "auto",
+    marginBottom: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  userMessage: {
+    backgroundColor: "#0066ff",
+    color: "#ffffff",
+    padding: "10px",
+    borderRadius: "10px",
+    alignSelf: "flex-end",
+    maxWidth: "70%",
+  },
+  assistantMessage: {
+    backgroundColor: "#2C3E50",
+    color: "#ffffff",
+    padding: "10px",
+    borderRadius: "10px",
+    alignSelf: "flex-start",
+    maxWidth: "70%",
+  },
+  chatInput: {
+    display: "flex",
+    gap: "10px",
   attachmentButton: {
     fontSize: "18px",
     color: "#bbbbbb",

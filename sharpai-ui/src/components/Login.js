@@ -45,9 +45,11 @@ function Login() {
           </label>
           <input
             type="email"
+            id="email"
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="form-control"
             style={styles.input}
             className="form-control"
           />
@@ -59,13 +61,16 @@ function Login() {
           </label>
           <input
             type="password"
+            id="password"
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="form-control"
             style={styles.input}
             className="form-control"
           />
         </div>
+
 
         <button type="submit" style={styles.button} className="btn btn-primary">
           Login
