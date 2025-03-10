@@ -22,7 +22,7 @@ function Login() {
 
       if (response.ok) {
         alert(data.message);
-        localStorage.setItem("token", data.token); // Save token to localStorage
+        localStorage.setItem("token", data.token);
         navigate("/chat");
       } else {
         alert(data.message);
@@ -33,21 +33,14 @@ function Login() {
   };
 
   return (
-    <div
-      className="d-flex justify-content-center align-items-center min-vh-100 bg-dark text-light p-3"
-      style={styles.container}
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="w-100 p-4 bg-secondary rounded shadow"
-        style={styles.form}
-      >
-        <h2 className="text-center mb-4" style={styles.header}>
-          Login to SharpAI
+    <div style={styles.container}>
+      <form onSubmit={handleSubmit} style={styles.form} className="w-100">
+        <h2 style={styles.header} className="text-center fw-bold mb-3">
+          Welcome Back 👋
         </h2>
 
-        <div className="mb-3">
-          <label htmlFor="email" className="form-label" style={styles.label}>
+        <div style={styles.fieldContainer} className="mb-3">
+          <label style={styles.label} className="form-label">
             Email*
           </label>
           <input
@@ -58,11 +51,12 @@ function Login() {
             onChange={(e) => setEmail(e.target.value)}
             className="form-control"
             style={styles.input}
+            className="form-control"
           />
         </div>
 
-        <div className="mb-3">
-          <label htmlFor="password" className="form-label" style={styles.label}>
+        <div style={styles.fieldContainer} className="mb-3">
+          <label style={styles.label} className="form-label">
             Password*
           </label>
           <input
@@ -73,23 +67,21 @@ function Login() {
             onChange={(e) => setPassword(e.target.value)}
             className="form-control"
             style={styles.input}
+            className="form-control"
           />
         </div>
 
-        <button
-          type="submit"
-          className="btn btn-primary w-100"
-          style={styles.button}
-        >
+
+        <button type="submit" style={styles.button} className="btn btn-primary">
           Login
         </button>
 
-        <div className="mt-3 text-center" style={styles.footer}>
+        <div style={styles.footer} className="mt-3 text-center">
           Don't have an account?{" "}
           <span
             onClick={() => navigate("/signup")}
-            className="text-primary fw-bold"
             style={styles.signUpLink}
+            className="cursor-pointer"
           >
             Sign Up
           </span>
@@ -103,36 +95,70 @@ const styles = {
   container: {
     backgroundColor: "#0C111B",
     color: "#ffffff",
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "20px",
   },
   form: {
+    width: "100%",
     maxWidth: "400px",
     backgroundColor: "#071730",
+    padding: "30px",
     borderRadius: "10px",
     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+    boxSizing: "border-box",
   },
   header: {
     fontSize: "24px",
     fontWeight: "bold",
+    marginBottom: "20px",
+    textAlign: "center",
+  },
+  fieldContainer: {
+    marginBottom: "20px",
   },
   label: {
-    color: "#bbbbbb",
+    display: "block",
+    fontSize: "14px",
+    marginBottom: "8px",
     fontWeight: "bold",
+    color: "#bbbbbb",
+    textAlign: "left",
   },
   input: {
+    width: "100%",
+    padding: "10px",
+    borderRadius: "5px",
+    border: "1px solid #1C2639",
     backgroundColor: "#1C2639",
     color: "#fff",
-    border: "1px solid #1C2639",
+    fontSize: "14px",
+    outline: "none",
+    boxSizing: "border-box",
   },
   button: {
+    width: "100%",
+    padding: "12px",
+    border: "none",
+    borderRadius: "5px",
     backgroundColor: "#0066ff",
+    color: "#fff",
     fontWeight: "bold",
+    fontSize: "16px",
+    cursor: "pointer",
   },
   footer: {
+    marginTop: "20px",
+    textAlign: "center",
+    fontSize: "14px",
     color: "#bbbbbb",
   },
   signUpLink: {
-    cursor: "pointer",
     color: "#4da6ff",
+    cursor: "pointer",
+    fontWeight: "bold",
   },
 };
 
