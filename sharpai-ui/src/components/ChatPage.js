@@ -594,6 +594,7 @@ function ChatPage() {
     </div>
   );
 }
+
 const styles = {
   container: {
     backgroundColor: "#0C111B",
