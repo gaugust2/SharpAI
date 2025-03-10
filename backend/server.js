@@ -143,6 +143,27 @@ app.post("/login", async (req, res) => {
   }
 });
 
+app.delete("/deleteConversation/:conversationID", authenticateToken, async (req, res) => {
+  try {
+    const { conversationID } = req.params;
+
+    // Ensure the conversation belongs to the user before deleting
+    const deletedConversation = await Conversation.findOneAndDelete({
+      _id: conversationID,
+      userID: req.user.id,
+    });
+
+    if (!deletedConversation) {
+      return res.status(404).json({ message: "Conversation not found or unauthorized" });
+    }
+
+    res.json({ message: "Conversation deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    res.status(500).json({ message: "Failed to delete conversation" });
+  }
+});
+
 app.post("/betslip", upload.single("file"), authenticateToken, async (req, res) => {
   try {
     // Step 1: Parse the form betslip & photo uploaded betslip
