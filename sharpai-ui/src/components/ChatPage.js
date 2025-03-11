@@ -15,10 +15,9 @@ function ChatPage() {
   const [responseMessage, setResponseMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  // Chat states
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  const [isSending, setIsSending] = useState(false); // Track if a message is being sent
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef(null);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -44,7 +43,10 @@ function ChatPage() {
       }
   
       const data = await response.json();
+<<<<<<< Updated upstream
   
+=======
+>>>>>>> Stashed changes
       setConversations(data.conversations.reverse());
   
     } catch (error) {
@@ -66,11 +68,19 @@ function ChatPage() {
       if (!response.ok) {
         throw new Error("Failed to delete conversation.");
       }
+<<<<<<< Updated upstream
   
       // Remove from state to update UI
       setConversations((prev) => prev.filter((conv) => conv._id !== conversationID));
   
       // If deleted chat was selected, clear it from the chat window
+=======
+
+      setConversations((prev) =>
+        prev.filter((conv) => conv._id !== conversationID)
+      );
+
+>>>>>>> Stashed changes
       if (selectedConversation?._id === conversationID) {
         setSelectedConversation(null);
         setMessages([]);
@@ -85,13 +95,14 @@ function ChatPage() {
   
 
   useEffect(() => {
+<<<<<<< Updated upstream
       // Fetch previous conversations
+=======
+>>>>>>> Stashed changes
     fetchConversations();
-    // Check for stored analysis when component mounts
     const storedAnalysis = localStorage.getItem("betAnalysis");
     if (storedAnalysis) {
       setResponseMessage(JSON.parse(storedAnalysis));
-      // Clear the stored analysis after retrieving it
       localStorage.removeItem("betAnalysis");
     }
 
@@ -99,13 +110,13 @@ function ChatPage() {
     if (token) {
       try {
         const decoded = jwtDecode(token);
-        setUserName(decoded.firstName); // Get user's name to show later
+        setUserName(decoded.firstName);
       } catch (error) {
         console.error("Invalid token:", error);
-        handleLogout(); // Expired session, log out
+        handleLogout();
       }
     } else {
-      handleLogout(); // No token, log them out
+      handleLogout();
     }
   }, []);
 
@@ -125,14 +136,20 @@ function ChatPage() {
       }
   
       const data = await response.json();
+<<<<<<< Updated upstream
   
       // Update state to highlight selected conversation
+=======
+>>>>>>> Stashed changes
       setSelectedConversation({
         _id: conversationID,
         conversationName: data.conversation.conversationName,
         analysis: data.conversation.analysis || {},
       });
+<<<<<<< Updated upstream
   
+=======
+>>>>>>> Stashed changes
       setMessages(data.conversation.messages || []);
     } catch (error) {
       console.error("Error fetching conversation details:", error);
@@ -159,7 +176,10 @@ function ChatPage() {
     };
   
     formData.append("formBetslip", JSON.stringify(formBetslip));
+<<<<<<< Updated upstream
   
+=======
+>>>>>>> Stashed changes
     selectedFiles.forEach((file) => {
       formData.append("file", file);
     });
@@ -186,20 +206,28 @@ function ChatPage() {
       }
   
       const data = await response.json();
+<<<<<<< Updated upstream
   
       // Store conversation ID
       localStorage.setItem("currentConversationID", data.conversationID);
   
       // Auto-select the new conversation immediately
+=======
+      localStorage.setItem("currentConversationID", data.conversationID);
+>>>>>>> Stashed changes
       setSelectedConversation({
         _id: data.conversationID,
         conversationName: data.conversationName,
         analysis: data.analysis || {},
       });
+<<<<<<< Updated upstream
   
       setMessages([{ role: "assistant", content: data.analysis }]);
   
       // Fetch updated conversations from the backend to update the sidebar properly
+=======
+      setMessages([{ role: "assistant", content: data.analysis }]);
+>>>>>>> Stashed changes
       await fetchConversations();
     } catch (error) {
       console.error("Error submitting bet slip:", error.message);
@@ -209,6 +237,7 @@ function ChatPage() {
     }
   };
 
+<<<<<<< Updated upstream
 
   useEffect(() => {
     const conversationID = localStorage.getItem("currentConversationID");
@@ -231,14 +260,16 @@ function ChatPage() {
       .catch((error) => console.error("Error fetching messages:", error));
   }, []);
 
+=======
+>>>>>>> Stashed changes
   const sendMessage = async () => {
-    if (!newMessage.trim() || isSending) return; // Prevent sending if already sending or empty message
+    if (!newMessage.trim() || isSending) return;
 
-    setIsSending(true); // Set sending state to true
+    setIsSending(true);
     const userMessage = { role: "user", content: newMessage };
-    const tempMessages = [...messages, userMessage]; // Temporarily add user message
-    setMessages(tempMessages); // Update UI immediately
-    setNewMessage(""); // Clear input
+    const tempMessages = [...messages, userMessage];
+    setMessages(tempMessages);
+    setNewMessage("");
 
     try {
       const conversationID = localStorage.getItem("currentConversationID");
@@ -257,18 +288,22 @@ function ChatPage() {
       }
 
       const data = await response.json();
-      console.log("API Response:", data); // Debugging: Log the API response
-
       if (data && data.response) {
+<<<<<<< Updated upstream
         // Add AI response to messages
         setMessages([...tempMessages, { role: "assistant", content: data.response }]);
+=======
+        setMessages([
+          ...tempMessages,
+          { role: "assistant", content: data.response },
+        ]);
+>>>>>>> Stashed changes
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      // Revert the messages state if the API call fails
-      setMessages(messages); // Restore previous messages
+      setMessages(messages);
     } finally {
-      setIsSending(false); // Reset sending state
+      setIsSending(false);
     }
   };
 
@@ -281,11 +316,10 @@ function ChatPage() {
 
   const formatSectionName = (name) => {
     let formattedName = name
-      .replace(/([a-z0-9])([A-Z])/g, "$1 $2") // Add space before capital letters
-      .replace(/([a-zA-Z])(\d)/g, "$1 $2") // Add space before digits
-      .replace(/^./, (str) => str.toUpperCase()); // Capitalize the first letter
+      .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+      .replace(/([a-zA-Z])(\d)/g, "$1 $2")
+      .replace(/^./, (str) => str.toUpperCase());
 
-    // Dynamically replace team names if present
     if (formattedName.includes("Selected Team")) {
       formattedName = formattedName.replace(
         "Selected Team",
@@ -344,6 +378,13 @@ function ChatPage() {
           style={styles.uploadHistoryButton}
         >
           Upload Betting History
+        </button>
+        <button
+          onClick={() => navigate("/settings")}
+          className="btn btn-outline-primary mb-3"
+          style={styles.settingsButton}
+        >
+          Settings
         </button>
         <div style={styles.recentChats}>
         <h2 className="fs-6 mb-2" style={styles.recentTitle}>
@@ -411,6 +452,7 @@ function ChatPage() {
             <i className="fas fa-spinner fa-spin" style={styles.spinner}></i>
             <p style={styles.loadingText}>Analyzing your bet...</p>
           </div>
+<<<<<<< Updated upstream
         ) : (
           <form onSubmit={handleSubmit} style={styles.formContainer}>
             <div style={styles.inputsWrapper}>
@@ -575,6 +617,40 @@ function ChatPage() {
 
             <h4>Messages:</h4>
             <div className="chat-messages-container" style={{ width: "100%", maxHeight: "500px", overflowY: "auto" }}>
+=======
+        ) : selectedConversation && selectedConversation.analysis ? (
+          <div className="mt-3" style={{ width: "100%" }}>
+            <h3>{selectedConversation.conversationName}</h3>
+
+            <div
+              className="chat-messages-container"
+              style={{ width: "100%", maxHeight: "500px", overflowY: "auto" }}
+            >
+              {Object.entries(selectedConversation.analysis).map(([key, value]) => (
+                <div
+                  key={key}
+                  style={{
+                    textAlign: "left",
+                    margin: "10px 0",
+                  }}
+                >
+                  <span
+                    style={{
+                      backgroundColor: "#333",
+                      color: "#fff",
+                      padding: "10px",
+                      borderRadius: "8px",
+                      display: "inline-block",
+                      maxWidth: "60%",
+                    }}
+                  >
+                    <strong>{formatSectionName(key)}:</strong>
+                    <p>{value}</p>
+                  </span>
+                </div>
+              ))}
+
+>>>>>>> Stashed changes
               {messages.map((msg, index) => (
                 <div
                   key={index}
@@ -593,7 +669,6 @@ function ChatPage() {
                       maxWidth: "60%",
                     }}
                   >
-                    {/* Convert object messages to readable text */}
                     {typeof msg.content === "object" ? (
                       <div>
                         {Object.entries(msg.content).map(([key, value]) => (
@@ -609,12 +684,26 @@ function ChatPage() {
                   </span>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <div style={styles.chatInput}>
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                placeholder="Type a message..."
+                style={styles.input}
+              />
+              <button onClick={sendMessage} style={styles.sendButton}>
+                <i className="fas fa-paper-plane"></i>
+              </button>
             </div>
 
              
             </div>
         ) : (
-          // Show the regular bet submission form when no past conversation is selected
           <form onSubmit={handleSubmit} style={styles.formContainer}>
             <div style={styles.inputsWrapper}>
               <div style={styles.inputSection}>
@@ -747,17 +836,6 @@ const styles = {
     fontWeight: "bold",
     marginBottom: "30px",
   },
-  settingsButton: {
-    backgroundColor: "#ffffff",
-    color: "#0066ff",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
-    marginBottom: "30px",
-  },
   logoutButton: {
     backgroundColor: "#ffffff",
     color: "#0066ff",
@@ -780,6 +858,17 @@ const styles = {
     fontWeight: "bold",
     marginBottom: "30px",
 
+  },
+  settingsButton: {
+    backgroundColor: "#ffffff",
+    color: "#0066ff",
+    padding: "10px 20px",
+    borderRadius: "5px",
+    border: "none",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "bold",
+    marginBottom: "30px",
   },
   recentChats: {
     marginTop: "20px",
@@ -837,7 +926,8 @@ const styles = {
     marginBottom: "auto",
   },
   chatLogo: {
-    fontSize: "48px",
+    width: "200px",
+    height: "200px",
     marginBottom: "20px",
   },
   welcomeMessage: {
@@ -848,28 +938,22 @@ const styles = {
     fontSize: "24px",
     color: "#bbbbbb",
   },
-  inputContainer: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-    marginTop: "auto",
-  },
   loadingContainer: {
     display: "flex",
-    alignItems: "center", // Align items vertically
-    justifyContent: "center", // Align items horizontally
-    gap: "10px", // Space between spinner and text
-    height: "100%", // Optional: Adjust based on layout
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "10px",
+    height: "100%",
   },
   spinner: {
-    fontSize: "24px", // Adjust spinner size
-    color: "#4caf50", // Match your theme
+    fontSize: "24px",
+    color: "#4caf50",
   },
   loadingText: {
-    fontSize: "18px", // Adjust text size
-    color: "#4caf50", // Match your theme
+    fontSize: "18px",
+    color: "#4caf50",
     fontWeight: "bold",
-    margin: 0, // Remove extra spacing
+    margin: 0,
   },
   formContainer: {
     width: "100%",
@@ -904,15 +988,6 @@ const styles = {
     width: "100%",
     backgroundColor: "#1C2639",
     color: "#ffffff",
-  },
-  inputBar: {
-    display: "flex",
-    alignItems: "center",
-    width: "100%",
-    maxWidth: "600px",
-    backgroundColor: "#1C2639",
-    borderRadius: "30px",
-    padding: "10px 20px",
   },
   fileUploadContainer: {
     width: "100%",
@@ -990,6 +1065,7 @@ const styles = {
       backgroundColor: "#0052cc",
     },
   },
+<<<<<<< Updated upstream
   analysisContainer: {
     width: "100%",
     maxWidth: "800px",
@@ -1040,29 +1116,31 @@ const styles = {
     border: "none",
     cursor: "pointer",
     marginRight: "10px",
+=======
+  chatInput: {
+    display: "flex",
+    gap: "10px",
+    marginTop: "20px",
+>>>>>>> Stashed changes
   },
   input: {
     flex: 1,
-    backgroundColor: "transparent",
-    border: "none",
+    backgroundColor: "#1C2639",
+    border: "1px solid #2C3E50",
     color: "#ffffff",
     fontSize: "16px",
+    padding: "10px",
+    borderRadius: "6px",
     outline: "none",
-    padding: "5px",
   },
   sendButton: {
-    fontSize: "18px",
-    color: "#ffffff",
     backgroundColor: "#0066ff",
-    borderRadius: "50%",
+    color: "#ffffff",
     border: "none",
-    padding: "10px",
+    borderRadius: "6px",
+    padding: "10px 20px",
     cursor: "pointer",
-  },
-  chatLogo: {
-    width: "200px",
-    height: "200px",
-    marginBottom: "20px",
+    fontSize: "16px",
   },
 };
 
