@@ -213,17 +213,21 @@ app.post("/betslip", upload.single("file"), authenticateToken, async (req, res) 
       });
     }
 
-    // Step 4: Perform analysis with the external data
+    // Step 4: Get user's betting budget
+    const bettingBudget = (await User.findById(req.user.id, "bettingBudget").exec()).bettingBudget
+
+    // Step 5: Perform analysis with the external data
     const analysis = await getAnalysis(
-      { selectedTeam, opposingTeam },
-      externalData
+      { selectedTeam, opposingTeam }, //Add betting budget here
+      externalData,
+      bettingBudget
     );
 
     if (!analysis) {
       return res.status(500).json({ message: "Failed to generate analysis" });
     }
 
-    // Step 5: Create name for new conversation
+    // Step 6: Create name for new conversation
     const title = await getAIResponse(
       [
         {
@@ -239,7 +243,7 @@ app.post("/betslip", upload.single("file"), authenticateToken, async (req, res) 
       0.9
     );
 
-    // Step 6: Create new Conversation in MongoDB
+    // Step 7: Create new Conversation in MongoDB
     const newConversation = new Conversation({
       conversationName: `${title} - ${date}`,
       userID: req.user.id,
@@ -249,7 +253,7 @@ app.post("/betslip", upload.single("file"), authenticateToken, async (req, res) 
 
     console.log("Analysis generated:", analysis);
 
-    // Step 7: Respond with the analysis result
+    // Step 8: Respond with the analysis result
     res.status(200).json({ conversationID, analysis });
   } catch (error) {
     console.error("Error in /betslip:", error.message);
