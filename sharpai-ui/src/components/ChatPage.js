@@ -22,6 +22,8 @@ function ChatPage() {
   const messagesEndRef = useRef(null);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -85,6 +87,32 @@ function ChatPage() {
     }
   };
 
+
+  const handleDeleteAllConversations = async () => {
+    if (!window.confirm("Are you sure you want to delete ALL conversations? This action cannot be undone.")) return;
+  
+    try {
+      const response = await fetch("http://localhost:3000/deleteConversations", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error("Failed to delete all conversations.");
+      }
+  
+      setConversations([]);
+      setSelectedConversation(null);
+      setMessages([]);
+      localStorage.removeItem("currentConversationID");
+    } catch (error) {
+      console.error("Error deleting all conversations:", error);
+      alert("Failed to delete all conversations. Please try again.");
+    }
+  };
+  
   useEffect(() => {
     // Fetch previous conversations
     fetchConversations();
@@ -307,99 +335,106 @@ function ChatPage() {
 
   return (
     <div className="d-flex min-vh-100" style={styles.container}>
-      {/* Sidebar */}
-      <div className="d-flex flex-column p-3" style={styles.sidebar}>
-        <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
-          SharpAI
-        </h1>
-        <button
+    {/* Sidebar Toggle Button (Always Available) */}
+    <button 
+      onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+      className="btn btn-outline-primary sidebar-toggle"
+      style={styles.menuButton}
+    >
+      ☰ Menu
+    </button>
+
+    {/* Sidebar (Always Toggleable) */}
+    <div 
+      className={`sidebar ${isSidebarOpen ? "show" : "hide"}`} 
+      style={styles.sidebar}
+    >
+      {/* Close Button */}
+      <button 
+        onClick={() => setIsSidebarOpen(false)} 
+        className="btn btn-close close-btn"
+        style={styles.closeButton}
+      >
+        ✖
+      </button>
+
+      <h1 className="fs-4 fw-bold mb-4" style={styles.title}>SharpAI</h1>
+      <div className="sidebar-buttons">
+        <button 
           onClick={() => {
             setSelectedConversation(null);
             setMessages([]);
-          }}
-          className="btn btn-primary mb-3"
-          style={styles.newChatButton}
+          }} 
+          className="btn btn-primary sidebar-btn"
         >
           + New Chat
         </button>
 
-        <button
-          onClick={handleLogout}
-          className="btn btn-outline-primary mb-3"
-          style={styles.logoutButton}
-        >
+        <button onClick={handleLogout} className="btn btn-outline-primary sidebar-btn">
           Logout
         </button>
-        <button
-          onClick={() => navigate("/upload-betting-history")}
-          className="btn btn-outline-primary mb-3"
-          style={styles.uploadHistoryButton}
+
+        <button 
+          onClick={() => navigate("/upload-betting-history")} 
+          className="btn btn-outline-primary sidebar-btn"
         >
           Upload Betting History
         </button>
-        <div style={styles.recentChats}>
-          <h2 className="fs-6 mb-2" style={styles.recentTitle}>
-            Recent Conversations
-          </h2>
-          {conversations.length === 0 ? (
-            <p style={{ color: "#bbb", fontSize: "14px" }}>
-              No previous conversations
-            </p>
-          ) : (
-            conversations.map((conv) => (
-              <div
-                key={conv._id}
-                className="d-flex justify-content-between align-items-center p-2"
-                style={{
-                  ...styles.chatItem,
-                  backgroundColor:
-                    selectedConversation?._id === conv._id
-                      ? "#1A73E8"
-                      : "transparent",
-                }}
-                onMouseEnter={(e) => {
-                  if (!e.currentTarget.querySelector(".delete-btn:hover")) {
-                    e.currentTarget.style.backgroundColor = "#2C3E50";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    selectedConversation?._id === conv._id
-                      ? "#1A73E8"
-                      : "transparent";
-                }}
-              >
-                <div
-                  onClick={() => handleSelectConversation(conv._id)}
-                  className="d-flex align-items-center flex-grow-1"
-                  style={{ cursor: "pointer" }}
-                >
-                  <div className="me-2" style={styles.chatIcon}>
-                    📄
-                  </div>
-                  <span className="text-white" style={styles.chatText}>
-                    {conv.conversationName}
-                  </span>
-                </div>
+      </div>
 
-                <button
-                  onClick={() => handleDeleteConversation(conv._id)}
-                  className="delete-btn"
-                  style={styles.deleteButton}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.color = "#ff3333")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.color = "#ff4d4d")
-                  }
-                >
-                  🗑️
-                </button>
-              </div>
-            ))
+      <div style={styles.recentChats}>
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h2 className="fs-6" style={styles.recentTitle}>Recent Conversations</h2>
+
+          {conversations.length > 0 && (
+            <button 
+              onClick={handleDeleteAllConversations} 
+              className="btn btn-sm btn-outline-danger"
+              style={styles.deleteAllButton}
+            >
+              🗑️ Delete All
+            </button>
           )}
         </div>
+
+        {conversations.length === 0 ? (
+          <p style={{ color: "#bbb", fontSize: "14px" }}>No previous conversations</p>
+        ) : (
+          conversations.map((conv) => (
+            <div
+              key={conv._id}
+              className="d-flex justify-content-between align-items-center p-2"
+              style={{
+                ...styles.chatItem,
+                backgroundColor: selectedConversation?._id === conv._id ? "#1A73E8" : "transparent",
+              }}
+              onClick={() => {
+                handleSelectConversation(conv._id);
+                setIsSidebarOpen(false); // Close sidebar after selecting
+              }}
+            >
+              <div className="d-flex align-items-center flex-grow-1">
+                <div className="me-2" style={styles.chatIcon}>📄</div>
+                <span className="text-white" style={styles.chatText}>{conv.conversationName}</span>
+              </div>
+
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent chat selection
+                  handleDeleteConversation(conv._id);
+                }}
+                className="delete-btn"
+                style={styles.deleteButton}
+              >
+                🗑️
+              </button>
+            </div>
+          ))
+        )}
       </div>
+    </div>
+
+
 
       {/* Main Chat Window */}
       <div
@@ -601,10 +636,81 @@ const styles = {
     color: "#ffffff",
     display: "flex",
     minHeight: "100vh",
+    flexDirection: "row",
+  },
+  menuButton: {
+    position: "absolute",
+    top: "15px",
+    left: "15px",
+    zIndex: 10,
+    fontSize: "18px",
+    padding: "10px",
+    border: "none",
+    backgroundColor: "#0066ff",
+    color: "white",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
   sidebar: {
     width: "300px",
     backgroundColor: "#071730",
+    position: "fixed",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 1000,
+    transition: "transform 0.3s ease-in-out",
+  },
+  sidebarButtons: {
+    display: "flex",
+    flexDirection: "column", 
+    gap: "10px", 
+  },
+  sidebarBtn: {
+    width: "100%", 
+    padding: "12px",
+    borderRadius: "8px",
+    fontSize: "16px",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  closeButton: {
+    alignSelf: "flex-end",
+    marginBottom: "10px",
+    fontSize: "18px",
+    color: "#ffffff",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+  },
+  chatWindow: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px",
+    backgroundColor: "#0C111B",
+    width: "100%",
+  },
+  chatItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "10px 0",
+    cursor: "pointer",
+    borderRadius: "8px",
+    marginBottom: "5px",
+    transition: "background-color 0.2s ease-in-out",
+  },
+  deleteButton: {
+    background: "transparent",
+    border: "none",
+    color: "#ff4d4d",
+    fontSize: "16px",
+    cursor: "pointer",
+    padding: "5px",
+    marginLeft: "10px",
+    transition: "color 0.2s ease-in-out",
   },
   title: {
     fontSize: "24px",
@@ -663,12 +769,6 @@ const styles = {
     marginBottom: "10px",
     color: "#bbbbbb",
   },
-  chatItem: {
-    display: "flex",
-    alignItems: "center",
-    padding: "10px 0",
-    cursor: "pointer",
-  },
   chatIcon: {
     marginRight: "10px",
     fontSize: "18px",
@@ -676,15 +776,6 @@ const styles = {
   chatText: {
     fontSize: "14px",
     color: "#ffffff",
-  },
-  chatWindow: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "20px",
-    backgroundColor: "#0C111B",
   },
   welcomeContainer: {
     textAlign: "center",
@@ -919,6 +1010,10 @@ const styles = {
     height: "200px",
     marginBottom: "20px",
   },
+
+  
 };
+
+
 
 export default ChatPage;
