@@ -2,15 +2,19 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import chatLogo from "../assets/Frame 1216258384.svg";
 import { jwtDecode } from "jwt-decode";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 function ChatPage() {
   const [userName, setUserName] = useState("");
   const [league, setLeague] = useState("");
-  const [selectedTeamCity, setSelectedTeamCity] = useState("");
-  const [selectedTeamName, setSelectedTeamName] = useState("");
-  const [opposingTeamCity, setOpposingTeamCity] = useState("");
-  const [opposingTeamName, setOpposingTeamName] = useState("");
-  const [date, setDate] = useState("");
+  const [teamData, setTeamData] = useState({});
+  const [cities, setCities] = useState([]);
+  const [selectedTeamCity, setSelectedTeamCity] = useState(""); 
+  const [selectedTeamName, setSelectedTeamName] = useState(""); 
+  const [opposingTeamCity, setOpposingTeamCity] = useState(""); 
+  const [opposingTeamName, setOpposingTeamName] = useState(""); 
+  const [date, setDate] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [responseMessage, setResponseMessage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -24,11 +28,42 @@ function ChatPage() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  useEffect(() => {
+      fetch("/teamNames.json")
+        .then((response) => response.json())
+        .then((data) => setTeamData(data))
+        .catch((error) => console.error("Error loading team names:", error));
+    }, []);
+    const handleFileChange = (e) => {
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
+    };
 
-  const handleFileChange = (e) => {
-    const files = Array.from(e.target.files);
-    setSelectedFiles(files);
-  };
+    useEffect(() => {
+      if (league && teamData[league]) {
+        const uniqueCities = [...new Set(teamData[league].map((team) => team.City))];
+        setCities(uniqueCities);
+        setSelectedTeamCity("");
+        setSelectedTeamName("");
+      }
+    }, [league]);
+
+    useEffect(() => {
+      if (selectedTeamCity && teamData[league]) {
+        const foundTeam = teamData[league].find((team) => team.City === selectedTeamCity);
+        if (foundTeam) setSelectedTeamName(foundTeam.Name);
+      }
+    }, [selectedTeamCity]);
+    
+    useEffect(() => {
+      if (opposingTeamCity && teamData[league]) {
+        const foundTeam = teamData[league].find((team) => team.City === opposingTeamCity);
+        if (foundTeam) setOpposingTeamName(foundTeam.Name);
+      }
+    }, [opposingTeamCity]);
+    
+    
+    
 
   const fetchConversations = async () => {
     try {
@@ -174,64 +209,64 @@ function ChatPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
+    const formattedDate = date
+      ? new Intl.DateTimeFormat("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }).format(date)
+      : "";
+  
+      const betData = {
+        league,
+        selectedTeam: { city: selectedTeamCity, name: selectedTeamName },
+        opposingTeam: { city: opposingTeamCity, name: opposingTeamName },
+        date: formattedDate,
+      };
+      
+  
+    console.log("Submitting bet:", betData);
+  
+    // Create formData object for the request
     const formData = new FormData();
-    const formBetslip = {
-      league: league.trim(),
-      selectedTeam: {
-        city: selectedTeamCity.trim(),
-        name: selectedTeamName.trim(),
-      },
-      opposingTeam: {
-        city: opposingTeamCity.trim(),
-        name: opposingTeamName.trim(),
-      },
-      date: date.trim(),
-    };
-
-    formData.append("formBetslip", JSON.stringify(formBetslip));
-
+    formData.append("formBetslip", JSON.stringify(betData));
+  
     selectedFiles.forEach((file) => {
       formData.append("file", file);
     });
-
+  
     setLoading(true);
-
+  
     try {
       const response = await fetch("http://localhost:3000/betslip", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: formData,
+        body: formData, // Corrected: Using formData now
       });
-
+  
       if (!response.ok) {
         const errorData = await response.json();
         if (response.status === 401) {
           alert("Session expired. Please log in again.");
           window.location.href = "/login";
         } else {
-          throw new Error(
-            errorData.message || "Failed to submit the bet slip."
-          );
+          throw new Error(errorData.message || "Failed to submit the bet slip.");
         }
       }
-
+  
       const data = await response.json();
-
+  
       // Store conversation ID
       localStorage.setItem("currentConversationID", data.conversationID);
-
+  
       // Auto-select the new conversation immediately
       setSelectedConversation({
         _id: data.conversationID,
         conversationName: data.conversationName,
         analysis: data.analysis || {},
       });
-
+  
       setMessages([{ role: "assistant", content: data.analysis }]);
-
+  
       // Fetch updated conversations from the backend to update the sidebar properly
       await fetchConversations();
     } catch (error) {
@@ -241,6 +276,7 @@ function ChatPage() {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     const conversationID = localStorage.getItem("currentConversationID");
@@ -521,51 +557,81 @@ function ChatPage() {
         ) : (
           // Show the regular bet submission form when no past conversation is selected
           <form onSubmit={handleSubmit} style={styles.formContainer}>
-            <div style={styles.inputsWrapper}>
-              <div style={styles.inputSection}>
-                <input
-                  type="text"
-                  placeholder="League (e.g., NBA)"
-                  value={league}
-                  onChange={(e) => setLeague(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Selected Team City"
-                  value={selectedTeamCity}
-                  onChange={(e) => setSelectedTeamCity(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Selected Team Name"
-                  value={selectedTeamName}
-                  onChange={(e) => setSelectedTeamName(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Opposing Team City"
-                  value={opposingTeamCity}
-                  onChange={(e) => setOpposingTeamCity(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Opposing Team Name"
-                  value={opposingTeamName}
-                  onChange={(e) => setOpposingTeamName(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  style={styles.inputBox}
-                />
-              </div>
+          <div style={styles.inputsWrapper}>
+            <div style={styles.inputSection}>
+              {/* Sport Dropdown */}
+              <label className="form-label">Sport</label>
+              <select
+                className="form-select"
+                value={league}
+                onChange={(e) => setLeague(e.target.value)}
+                style={styles.inputBox}
+              >
+                <option value="">Select a sport</option>
+                <option value="NBA">NBA</option>
+                <option value="NFL">NFL</option>
+                <option value="MLB">MLB</option>
+                <option value="NHL">NHL</option>
+              </select>
+
+              {/* Selected Team Dropdowns */}
+              {league && (
+                <>
+                  <label className="form-label">Selected Team City</label>
+                  <select
+                    className="form-select"
+                    value={selectedTeamCity}
+                    onChange={(e) => setSelectedTeamCity(e.target.value)}
+                    style={styles.inputBox}
+                  >
+                    <option value="">Select a city</option>
+                    {cities.map((city, index) => (
+                      <option key={index} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+
+                  <label className="form-label">Selected Team Name</label>
+                  <input type="text" className="form-control" value={selectedTeamName} readOnly style={styles.inputBox} />
+                </>
+              )}
+
+              {/* Opposing Team Dropdowns */}
+              {league && (
+                <>
+                  <label className="form-label">Opposing Team City</label>
+                  <select
+                    className="form-select"
+                    value={opposingTeamCity}
+                    onChange={(e) => setOpposingTeamCity(e.target.value)}
+                    style={styles.inputBox}
+                  >
+                    <option value="">Select a city</option>
+                    {cities.map((city, index) => (
+                      <option key={index} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+
+                  <label className="form-label">Opposing Team Name</label>
+                  <input type="text" className="form-control" value={opposingTeamName} readOnly style={styles.inputBox} />
+                </>
+              )}
+
+              {/* Date Picker */}
+              <label className="form-label">Game Date</label>
+              <DatePicker
+                selected={date}
+                onChange={(selectedDate) => setDate(selectedDate)}
+                dateFormat="MM/dd/yyyy"
+                className="form-control"
+                placeholderText="Select a date"
+                style={styles.inputBox}
+              />
+            </div>
+
 
               <div style={styles.fileSection}>
                 <div style={styles.fileUploadContainer}>
