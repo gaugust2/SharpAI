@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2"; // Import SweetAlert2
 
 function SettingsPage() {
   const navigate = useNavigate();
@@ -23,14 +24,22 @@ function SettingsPage() {
     const newTheme = e.target.value;
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
-    alert(`Theme updated to ${newTheme}`);
+    Swal.fire({
+      icon: "success",
+      title: "Theme updated!",
+      text: `Theme updated to ${newTheme}`,
+    });
   };
 
   const toggleNotifications = () => {
     const newStatus = !notificationsEnabled;
     setNotificationsEnabled(newStatus);
     localStorage.setItem("notificationsEnabled", newStatus);
-    alert(`Notifications ${newStatus ? "enabled" : "disabled"}`);
+    Swal.fire({
+      icon: "success",
+      title: "Notifications updated!",
+      text: `Notifications ${newStatus ? "enabled" : "disabled"}`,
+    });
   };
 
   const handleRevisitTos = () => {
@@ -42,7 +51,11 @@ function SettingsPage() {
     localStorage.setItem("notificationsEnabled", true);
     setTheme("dark");
     setNotificationsEnabled(true);
-    alert("Settings have been reset to default.");
+    Swal.fire({
+      icon: "success",
+      title: "Settings reset!",
+      text: "Settings have been reset to default.",
+    });
   };
 
   return (
@@ -77,13 +90,6 @@ function SettingsPage() {
           Logout
         </button>
         <button
-          onClick={() => navigate("/upload-betting-history")}
-          className="btn btn-outline-primary mb-3"
-          style={styles.uploadHistoryButton}
-        >
-          Upload Betting History
-        </button>
-        <button
           onClick={() => navigate("/settings")}
           className="btn btn-outline-primary mb-3"
           style={styles.settingsButton}
@@ -96,7 +102,9 @@ function SettingsPage() {
       <div style={styles.settingsContent}>
         <h2 style={styles.header}>Settings</h2>
         <div style={styles.setting}>
-          <span>Terms of Service: {tosAccepted ? "Accepted" : "Not Accepted"}</span>
+          <span>
+            Terms of Service: {tosAccepted ? "Accepted" : "Not Accepted"}
+          </span>
           <button onClick={handleRevisitTos} style={styles.button}>
             View Terms
           </button>

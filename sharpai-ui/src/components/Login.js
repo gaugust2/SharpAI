@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -21,14 +23,14 @@ function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message);
-        localStorage.setItem("token", data.token); // Save token to localStorage
-        navigate("/chat"); // Redirect to chat page
+        toast.success(data.message); // Success notification
+        localStorage.setItem("token", data.token);
+        setTimeout(() => navigate("/chat"), 1500); // Redirect after 1.5s
       } else {
-        alert(data.message); // Show error message
+        toast.error(data.message); // Error notification
       }
     } catch (error) {
-      alert("Something went wrong. Please try again."); // Handle network errors
+      toast.error("Something went wrong. Please try again.");
     }
   };
 
@@ -39,7 +41,6 @@ function Login() {
           Welcome Back 👋
         </h2>
 
-        {/* Email Input */}
         <div style={styles.fieldContainer} className="mb-3">
           <label style={styles.label} className="form-label">
             Email*
@@ -54,7 +55,6 @@ function Login() {
           />
         </div>
 
-        {/* Password Input */}
         <div style={styles.fieldContainer} className="mb-3">
           <label style={styles.label} className="form-label">
             Password*
@@ -69,12 +69,10 @@ function Login() {
           />
         </div>
 
-        {/* Login Button */}
         <button type="submit" style={styles.button} className="btn btn-primary">
           Login
         </button>
 
-        {/* Sign Up Link */}
         <div style={styles.footer} className="mt-3 text-center">
           Don't have an account?{" "}
           <span
@@ -86,6 +84,9 @@ function Login() {
           </span>
         </div>
       </form>
+
+      {/* Add ToastContainer */}
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 }
