@@ -2,15 +2,19 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import chatLogo from "../assets/Frame 1216258384.svg";
 import { jwtDecode } from "jwt-decode";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 function ChatPage() {
   const [userName, setUserName] = useState("");
   const [league, setLeague] = useState("");
+  const [teamData, setTeamData] = useState({});
+  const [cities, setCities] = useState([]);
   const [selectedTeamCity, setSelectedTeamCity] = useState("");
   const [selectedTeamName, setSelectedTeamName] = useState("");
   const [opposingTeamCity, setOpposingTeamCity] = useState("");
   const [opposingTeamName, setOpposingTeamName] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [responseMessage, setResponseMessage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -21,11 +25,42 @@ function ChatPage() {
   const messagesEndRef = useRef(null);
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  useEffect(() => {
+    fetch("/teamNames.json")
+      .then((response) => response.json())
+      .then((data) => setTeamData(data))
+      .catch((error) => console.error("Error loading team names:", error));
+  }, []);
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
   };
+
+  useEffect(() => {
+    if (league && teamData[league]) {
+      const uniqueCities = [...new Set(teamData[league].map((team) => team.City))];
+      setCities(uniqueCities);
+      setSelectedTeamCity("");
+      setSelectedTeamName("");
+    }
+  }, [league]);
+
+  useEffect(() => {
+    if (selectedTeamCity && teamData[league]) {
+      const foundTeam = teamData[league].find((team) => team.City === selectedTeamCity);
+      if (foundTeam) setSelectedTeamName(foundTeam.Name);
+    }
+  }, [selectedTeamCity]);
+
+  useEffect(() => {
+    if (opposingTeamCity && teamData[league]) {
+      const foundTeam = teamData[league].find((team) => team.City === opposingTeamCity);
+      if (foundTeam) setOpposingTeamName(foundTeam.Name);
+    }
+  }, [opposingTeamCity]);
 
   const fetchConversations = async () => {
     try {
@@ -77,6 +112,31 @@ function ChatPage() {
     } catch (error) {
       console.error("Error deleting conversation:", error);
       alert("Failed to delete conversation. Please try again.");
+    }
+  };
+
+  const handleDeleteAllConversations = async () => {
+    if (!window.confirm("Are you sure you want to delete ALL conversations? This action cannot be undone.")) return;
+
+    try {
+      const response = await fetch("http://localhost:3000/deleteConversations", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete all conversations.");
+      }
+
+      setConversations([]);
+      setSelectedConversation(null);
+      setMessages([]);
+      localStorage.removeItem("currentConversationID");
+    } catch (error) {
+      console.error("Error deleting all conversations:", error);
+      alert("Failed to delete all conversations. Please try again.");
     }
   };
 
@@ -136,21 +196,20 @@ function ChatPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    const formBetslip = {
-      league: league.trim(),
-      selectedTeam: {
-        city: selectedTeamCity.trim(),
-        name: selectedTeamName.trim(),
-      },
-      opposingTeam: {
-        city: opposingTeamCity.trim(),
-        name: opposingTeamName.trim(),
-      },
-      date: date.trim(),
+    const formattedDate = date
+      ? new Intl.DateTimeFormat("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }).format(date)
+      : "";
+
+    const betData = {
+      league,
+      selectedTeam: { city: selectedTeamCity, name: selectedTeamName },
+      opposingTeam: { city: opposingTeamCity, name: opposingTeamName },
+      date: formattedDate,
     };
 
-    formData.append("formBetslip", JSON.stringify(formBetslip));
+    const formData = new FormData();
+    formData.append("formBetslip", JSON.stringify(betData));
+
     selectedFiles.forEach((file) => {
       formData.append("file", file);
     });
@@ -241,7 +300,10 @@ function ChatPage() {
 
       const data = await response.json();
       if (data && data.response) {
-        setMessages([...tempMessages, { role: "assistant", content: data.response }]);
+        setMessages([
+          ...tempMessages,
+          { role: "assistant", content: data.response },
+        ]);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -278,47 +340,75 @@ function ChatPage() {
 
   return (
     <div className="d-flex min-vh-100" style={styles.container}>
-      {/* Sidebar */}
-      <div className="d-flex flex-column p-3" style={styles.sidebar}>
+      {/* Sidebar Toggle Button (Always Available) */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="btn btn-outline-primary sidebar-toggle"
+        style={styles.menuButton}
+      >
+        ☰ Menu
+      </button>
+
+      {/* Sidebar (Always Toggleable) */}
+      <div
+        className={`sidebar ${isSidebarOpen ? "show" : "hide"}`}
+        style={styles.sidebar}
+      >
+        {/* Close Button */}
+        <button
+          onClick={() => setIsSidebarOpen(false)}
+          className="btn btn-close close-btn"
+          style={styles.closeButton}
+        >
+          ✖
+        </button>
+
         <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
           SharpAI
         </h1>
-        <button
-          onClick={() => {
-            setSelectedConversation(null);
-            setMessages([]);
-          }}
-          className="btn btn-primary mb-3"
-          style={styles.newChatButton}
-        >
-          + New Chat
-        </button>
+        <div className="sidebar-buttons">
+          <button
+            onClick={() => {
+              setSelectedConversation(null);
+              setMessages([]);
+            }}
+            className="btn btn-primary sidebar-btn"
+          >
+            + New Chat
+          </button>
 
-        <button
-          onClick={handleLogout}
-          className="btn btn-outline-primary mb-3"
-          style={styles.logoutButton}
-        >
-          Logout
-        </button>
-        <button
-          onClick={() => navigate("/upload-betting-history")}
-          className="btn btn-outline-primary mb-3"
-          style={styles.uploadHistoryButton}
-        >
-          Upload Betting History
-        </button>
-        <button
-          onClick={() => navigate("/settings")}
-          className="btn btn-outline-primary mb-3"
-          style={styles.settingsButton}
-        >
-          Settings
-        </button>
+          <button
+            onClick={handleLogout}
+            className="btn btn-outline-primary sidebar-btn"
+          >
+            Logout
+          </button>
+
+          <button
+            onClick={() => navigate("/upload-betting-history")}
+            className="btn btn-outline-primary sidebar-btn"
+          >
+            Upload Betting History
+          </button>
+        </div>
+
         <div style={styles.recentChats}>
-          <h2 className="fs-6 mb-2" style={styles.recentTitle}>
-            Recent Conversations
-          </h2>
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <h2 className="fs-6" style={styles.recentTitle}>
+              Recent Conversations
+            </h2>
+
+            {conversations.length > 0 && (
+              <button
+                onClick={handleDeleteAllConversations}
+                className="btn btn-sm btn-outline-danger"
+                style={styles.deleteAllButton}
+              >
+                🗑️ Delete All
+              </button>
+            )}
+          </div>
+
           {conversations.length === 0 ? (
             <p style={{ color: "#bbb", fontSize: "14px" }}>
               No previous conversations
@@ -331,27 +421,14 @@ function ChatPage() {
                 style={{
                   ...styles.chatItem,
                   backgroundColor:
-                    selectedConversation?._id === conv._id
-                      ? "#1A73E8"
-                      : "transparent",
+                    selectedConversation?._id === conv._id ? "#1A73E8" : "transparent",
                 }}
-                onMouseEnter={(e) => {
-                  if (!e.currentTarget.querySelector(".delete-btn:hover")) {
-                    e.currentTarget.style.backgroundColor = "#2C3E50";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    selectedConversation?._id === conv._id
-                      ? "#1A73E8"
-                      : "transparent";
+                onClick={() => {
+                  handleSelectConversation(conv._id);
+                  setIsSidebarOpen(false); // Close sidebar after selecting
                 }}
               >
-                <div
-                  onClick={() => handleSelectConversation(conv._id)}
-                  className="d-flex align-items-center flex-grow-1"
-                  style={{ cursor: "pointer" }}
-                >
+                <div className="d-flex align-items-center flex-grow-1">
                   <div className="me-2" style={styles.chatIcon}>
                     📄
                   </div>
@@ -361,11 +438,12 @@ function ChatPage() {
                 </div>
 
                 <button
-                  onClick={() => handleDeleteConversation(conv._id)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent chat selection
+                    handleDeleteConversation(conv._id);
+                  }}
                   className="delete-btn"
                   style={styles.deleteButton}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#ff3333")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#ff4d4d")}
                 >
                   🗑️
                 </button>
@@ -403,38 +481,23 @@ function ChatPage() {
         ) : selectedConversation && selectedConversation.analysis ? (
           <div className="mt-3" style={{ width: "100%" }}>
             <h3>{selectedConversation.conversationName}</h3>
+            <h4>Analysis:</h4>
+            <div className="response-text">
+              {Object.entries(selectedConversation.analysis).map(
+                ([key, value]) => (
+                  <div key={key}>
+                    <strong>{formatSectionName(key)}:</strong>
+                    <p>{value}</p>
+                  </div>
+                )
+              )}
+            </div>
 
-            {/* Chat Messages */}
+            <h4>Messages:</h4>
             <div
               className="chat-messages-container"
               style={{ width: "100%", maxHeight: "500px", overflowY: "auto" }}
             >
-              {/* Display the analysis as the first message from the assistant */}
-              {Object.entries(selectedConversation.analysis).map(([key, value]) => (
-                <div
-                  key={key}
-                  style={{
-                    textAlign: "left",
-                    margin: "10px 0",
-                  }}
-                >
-                  <span
-                    style={{
-                      backgroundColor: "#333",
-                      color: "#fff",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      display: "inline-block",
-                      maxWidth: "60%",
-                    }}
-                  >
-                    <strong>{formatSectionName(key)}:</strong>
-                    <p>{value}</p>
-                  </span>
-                </div>
-              ))}
-
-              {/* Display the rest of the messages */}
               {messages.map((msg, index) => (
                 <div
                   key={index}
@@ -453,7 +516,6 @@ function ChatPage() {
                       maxWidth: "60%",
                     }}
                   >
-                    {/* Convert object messages to readable text */}
                     {typeof msg.content === "object" ? (
                       <div>
                         {Object.entries(msg.content).map(([key, value]) => (
@@ -488,50 +550,90 @@ function ChatPage() {
             </div>
           </div>
         ) : (
-          // Show the regular bet submission form when no past conversation is selected
           <form onSubmit={handleSubmit} style={styles.formContainer}>
             <div style={styles.inputsWrapper}>
               <div style={styles.inputSection}>
-                <input
-                  type="text"
-                  placeholder="League (e.g., NBA)"
+                {/* Sport Dropdown */}
+                <label className="form-label">Sport</label>
+                <select
+                  className="form-select"
                   value={league}
                   onChange={(e) => setLeague(e.target.value)}
                   style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Selected Team City"
-                  value={selectedTeamCity}
-                  onChange={(e) => setSelectedTeamCity(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Selected Team Name"
-                  value={selectedTeamName}
-                  onChange={(e) => setSelectedTeamName(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Opposing Team City"
-                  value={opposingTeamCity}
-                  onChange={(e) => setOpposingTeamCity(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Opposing Team Name"
-                  value={opposingTeamName}
-                  onChange={(e) => setOpposingTeamName(e.target.value)}
-                  style={styles.inputBox}
-                />
-                <input
-                  type="text"
-                  placeholder="Date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                >
+                  <option value="">Select a sport</option>
+                  <option value="NBA">NBA</option>
+                  <option value="NFL">NFL</option>
+                  <option value="MLB">MLB</option>
+                  <option value="NHL">NHL</option>
+                </select>
+
+                {/* Selected Team Dropdowns */}
+                {league && (
+                  <>
+                    <label className="form-label">Selected Team City</label>
+                    <select
+                      className="form-select"
+                      value={selectedTeamCity}
+                      onChange={(e) => setSelectedTeamCity(e.target.value)}
+                      style={styles.inputBox}
+                    >
+                      <option value="">Select a city</option>
+                      {cities.map((city, index) => (
+                        <option key={index} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+
+                    <label className="form-label">Selected Team Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={selectedTeamName}
+                      readOnly
+                      style={styles.inputBox}
+                    />
+                  </>
+                )}
+
+                {/* Opposing Team Dropdowns */}
+                {league && (
+                  <>
+                    <label className="form-label">Opposing Team City</label>
+                    <select
+                      className="form-select"
+                      value={opposingTeamCity}
+                      onChange={(e) => setOpposingTeamCity(e.target.value)}
+                      style={styles.inputBox}
+                    >
+                      <option value="">Select a city</option>
+                      {cities.map((city, index) => (
+                        <option key={index} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+
+                    <label className="form-label">Opposing Team Name</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={opposingTeamName}
+                      readOnly
+                      style={styles.inputBox}
+                    />
+                  </>
+                )}
+
+                {/* Date Picker */}
+                <label className="form-label">Game Date</label>
+                <DatePicker
+                  selected={date}
+                  onChange={(selectedDate) => setDate(selectedDate)}
+                  dateFormat="MM/dd/yyyy"
+                  className="form-control"
+                  placeholderText="Select a date"
                   style={styles.inputBox}
                 />
               </div>
@@ -605,10 +707,81 @@ const styles = {
     color: "#ffffff",
     display: "flex",
     minHeight: "100vh",
+    flexDirection: "row",
+  },
+  menuButton: {
+    position: "absolute",
+    top: "15px",
+    left: "15px",
+    zIndex: 10,
+    fontSize: "18px",
+    padding: "10px",
+    border: "none",
+    backgroundColor: "#0066ff",
+    color: "white",
+    borderRadius: "5px",
+    cursor: "pointer",
   },
   sidebar: {
     width: "300px",
     backgroundColor: "#071730",
+    position: "fixed",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: 1000,
+    transition: "transform 0.3s ease-in-out",
+  },
+  sidebarButtons: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  sidebarBtn: {
+    width: "100%",
+    padding: "12px",
+    borderRadius: "8px",
+    fontSize: "16px",
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  closeButton: {
+    alignSelf: "flex-end",
+    marginBottom: "10px",
+    fontSize: "18px",
+    color: "#ffffff",
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+  },
+  chatWindow: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px",
+    backgroundColor: "#0C111B",
+    width: "100%",
+  },
+  chatItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "10px 0",
+    cursor: "pointer",
+    borderRadius: "8px",
+    marginBottom: "5px",
+    transition: "background-color 0.2s ease-in-out",
+  },
+  deleteButton: {
+    background: "transparent",
+    border: "none",
+    color: "#ff4d4d",
+    fontSize: "16px",
+    cursor: "pointer",
+    padding: "5px",
+    marginLeft: "10px",
+    transition: "color 0.2s ease-in-out",
   },
   title: {
     fontSize: "24px",
@@ -667,12 +840,6 @@ const styles = {
     marginBottom: "10px",
     color: "#bbbbbb",
   },
-  chatItem: {
-    display: "flex",
-    alignItems: "center",
-    padding: "10px 0",
-    cursor: "pointer",
-  },
   chatIcon: {
     marginRight: "10px",
     fontSize: "18px",
@@ -680,15 +847,6 @@ const styles = {
   chatText: {
     fontSize: "14px",
     color: "#ffffff",
-  },
-  chatWindow: {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "20px",
-    backgroundColor: "#0C111B",
   },
   welcomeContainer: {
     textAlign: "center",
@@ -834,10 +992,57 @@ const styles = {
       backgroundColor: "#0052cc",
     },
   },
+  attachmentButton: {
+    fontSize: "18px",
+    color: "#bbbbbb",
+    backgroundColor: "transparent",
+    border: "none",
+    cursor: "pointer",
+    marginRight: "10px",
+  },
+  analysisContainer: {
+    width: "100%",
+    maxWidth: "800px",
+    margin: "0 auto",
+    padding: "20px",
+    backgroundColor: "#1C2639",
+    borderRadius: "10px",
+  },
+  chatContainer: {
+    width: "100%",
+    maxWidth: "800px",
+    margin: "0 auto",
+    padding: "20px",
+    backgroundColor: "#1C2639",
+    borderRadius: "10px",
+  },
+  chatMessages: {
+    maxHeight: "300px",
+    overflowY: "auto",
+    marginBottom: "20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  userMessage: {
+    backgroundColor: "#0066ff",
+    color: "#ffffff",
+    padding: "10px",
+    borderRadius: "10px",
+    alignSelf: "flex-end",
+    maxWidth: "70%",
+  },
+  assistantMessage: {
+    backgroundColor: "#2C3E50",
+    color: "#ffffff",
+    padding: "10px",
+    borderRadius: "10px",
+    alignSelf: "flex-start",
+    maxWidth: "70%",
+  },
   chatInput: {
     display: "flex",
     gap: "10px",
-    marginTop: "20px",
   },
   input: {
     flex: 1,

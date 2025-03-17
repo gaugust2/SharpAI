@@ -59,11 +59,11 @@ const prompts = {
     } game. Write a 5-8 sentence analysis on these projections, making sure to include the projected winner.\n\n${JSON.stringify(
       data
     )}`,
-  conclusionPrompt: (selectedTeam, opposingTeam, concatenatedResponses) =>
+  conclusionPrompt: (selectedTeam, opposingTeam, bettingBudget, concatenatedResponses) =>
     `Here are reports on the last 5 games and recent injuries of both teams in the upcoming ${selectedTeam.city} ${selectedTeam.name} vs ${opposingTeam.city} ${opposingTeam.name} game. Write a 5-8 sentence analysis on these reports.\n\n${concatenatedResponses}`,
 };
 
-async function getAnalysis(betslip, externalData) {
+async function getAnalysis(betslip, externalData, bettingBudget) {
   try {
     const [
       selectedTeamLast5GamesRaw,
@@ -105,7 +105,11 @@ async function getAnalysis(betslip, externalData) {
     const concatenatedResponses = `${selectedTeamLast5Games}\n\n${opposingTeamLast5Games}\n\n${selectedTeamInjuries}\n\n${opposingTeamInjuries}\n\n${projections}`;
     const conclusion = await getAIResponse([{
       role: "system",
-      content: prompts.conclusionPrompt(selectedTeamName, opposingTeamName, concatenatedResponses)
+      content: prompts.conclusionPrompt(selectedTeamName, opposingTeamName, bettingBudget, concatenatedResponses)
+    },
+    {
+      role: "user",
+      content: `Additionally, assess the risk of the match and recommend a betting amount between 1% to 3% of my betting budget of $${bettingBudget}.`
     }]);
 
     // Dynamically generate the object with team names in labels

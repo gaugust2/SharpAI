@@ -1,0 +1,376 @@
+{
+    "NFL": [
+        {
+            "City": "Arizona",
+            "Name": "Cardinals"
+        },
+        {
+            "City": "Atlanta",
+            "Name": "Falcons"
+        },
+        {
+            "City": "Baltimore",
+            "Name": "Ravens"
+        },
+        {
+            "City": "Buffalo",
+            "Name": "Bills"
+        },
+        {
+            "City": "Carolina",
+            "Name": "Panthers"
+        },
+        {
+            "City": "Chicago",
+            "Name": "Bears"
+        },
+        {
+            "City": "Cincinnati",
+            "Name": "Bengals"
+        },
+        {
+            "City": "Cleveland",
+            "Name": "Browns"
+        },
+        {
+            "City": "Dallas",
+            "Name": "Cowboys"
+        },
+        {
+            "City": "Denver",
+            "Name": "Broncos"
+        },
+        {
+            "City": "Detroit",
+            "Name": "Lions"
+        },
+        {
+            "City": "Green Bay",
+            "Name": "Packers"
+        },
+        {
+            "City": "Houston",
+            "Name": "Texans"
+        },
+        {
+            "City": "Indianapolis",
+            "Name": "Colts"
+        },
+        {
+            "City": "Jacksonville",
+            "Name": "Jaguars"
+        },
+        {
+            "City": "Kansas City",
+            "Name": "Chiefs"
+        },
+        {
+            "City": "Los Angeles",
+            "Name": "Chargers"
+        },
+        {
+            "City": "Los Angeles",
+            "Name": "Rams"
+        },
+        {
+            "City": "Las Vegas",
+            "Name": "Raiders"
+        },
+        {
+            "City": "Miami",
+            "Name": "Dolphins"
+        },
+        {
+            "City": "Minnesota",
+            "Name": "Vikings"
+        },
+        {
+            "City": "New England",
+            "Name": "Patriots"
+        },
+        {
+            "City": "New Orleans",
+            "Name": "Saints"
+        },
+        {
+            "City": "New York",
+            "Name": "Giants"
+        },
+        {
+            "City": "New York",
+            "Name": "Jets"
+        },
+        {
+            "City": "Philadelphia",
+            "Name": "Eagles"
+        },
+        {
+            "City": "Pittsburgh",
+            "Name": "Steelers"
+        },
+        {
+            "City": "Seattle",
+            "Name": "Seahawks"
+        },
+        {
+            "City": "San Francisco",
+            "Name": "49ers"
+        },
+        {
+            "City": "Tampa Bay",
+            "Name": "Buccaneers"
+        },
+        {
+            "City": "Tennessee",
+            "Name": "Titans"
+        },
+        {
+            "City": "Washington",
+            "Name": "Commanders"
+        }
+    ],
+    "MLB": [
+        {
+            "City": "Los Angeles",
+            "Name": "Dodgers"
+        },
+        {
+            "City": "Cincinnati",
+            "Name": "Reds"
+        },
+        {
+            "City": "Toronto",
+            "Name": "Blue Jays"
+        },
+        {
+            "City": "Pittsburgh",
+            "Name": "Pirates"
+        },
+        {
+            "City": "Kansas City",
+            "Name": "Royals"
+        },
+        {
+            "City": "Chicago",
+            "Name": "Cubs"
+        },
+        {
+            "City": "Cleveland",
+            "Name": "Guardians"
+        },
+        {
+            "City": "Tampa Bay",
+            "Name": "Rays"
+        },
+        {
+            "City": "Philadelphia",
+            "Name": "Phillies"
+        },
+        {
+            "City": "Seattle",
+            "Name": "Mariners"
+        },
+        {
+            "City": "Arizona",
+            "Name": "Diamondbacks"
+        },
+        {
+            "City": "San Francisco",
+            "Name": "Giants"
+        },
+        {
+            "City": "Chicago",
+            "Name": "White Sox"
+        },
+        {
+            "City": "Detroit",
+            "Name": "Tigers"
+        },
+        {
+            "City": "New York",
+            "Name": "Mets"
+        },
+        {
+            "City": "Baltimore",
+            "Name": "Orioles"
+        },
+        {
+            "City": "Minnesota",
+            "Name": "Twins"
+        },
+        {
+            "City": "Los Angeles",
+            "Name": "Angels"
+        },
+        {
+            "City": "Miami",
+            "Name": "Marlins"
+        },
+        {
+            "City": "Colorado",
+            "Name": "Rockies"
+        },
+        {
+            "City": null,
+            "Name": "Athletics"
+        },
+        {
+            "City": "Boston",
+            "Name": "Red Sox"
+        },
+        {
+            "City": "Atlanta",
+            "Name": "Braves"
+        },
+        {
+            "City": "Texas",
+            "Name": "Rangers"
+        },
+        {
+            "City": "New York",
+            "Name": "Yankees"
+        },
+        {
+            "City": "Houston",
+            "Name": "Astros"
+        },
+        {
+            "City": "St. Louis",
+            "Name": "Cardinals"
+        },
+        {
+            "City": "Milwaukee",
+            "Name": "Brewers"
+        },
+        {
+            "City": "San Diego",
+            "Name": "Padres"
+        },
+        {
+            "City": "Washington",
+            "Name": "Nationals"
+        }
+    ],
+    "NBA": [
+        {
+            "City": "Washington",
+            "Name": "Wizards"
+        },
+        {
+            "City": "Charlotte",
+            "Name": "Hornets"
+        },
+        {
+            "City": "Atlanta",
+            "Name": "Hawks"
+        },
+        {
+            "City": "Miami",
+            "Name": "Heat"
+        },
+        {
+            "City": "Orlando",
+            "Name": "Magic"
+        },
+        {
+            "City": "New York",
+            "Name": "Knicks"
+        },
+        {
+            "City": "Philadelphia",
+            "Name": "76ers"
+        },
+        {
+            "City": "Brooklyn",
+            "Name": "Nets"
+        },
+        {
+            "City": "Boston",
+            "Name": "Celtics"
+        },
+        {
+            "City": "Toronto",
+            "Name": "Raptors"
+        },
+        {
+            "City": "Chicago",
+            "Name": "Bulls"
+        },
+        {
+            "City": "Cleveland",
+            "Name": "Cavaliers"
+        },
+        {
+            "City": "Indiana",
+            "Name": "Pacers"
+        },
+        {
+            "City": "Detroit",
+            "Name": "Pistons"
+        },
+        {
+            "City": "Milwaukee",
+            "Name": "Bucks"
+        },
+        {
+            "City": "Minnesota",
+            "Name": "Timberwolves"
+        },
+        {
+            "City": "Utah",
+            "Name": "Jazz"
+        },
+        {
+            "City": "Oklahoma City",
+            "Name": "Thunder"
+        },
+        {
+            "City": "Portland",
+            "Name": "Trail Blazers"
+        },
+        {
+            "City": "Denver",
+            "Name": "Nuggets"
+        },
+        {
+            "City": "Memphis",
+            "Name": "Grizzlies"
+        },
+        {
+            "City": "Houston",
+            "Name": "Rockets"
+        },
+        {
+            "City": "New Orleans",
+            "Name": "Pelicans"
+        },
+        {
+            "City": "San Antonio",
+            "Name": "Spurs"
+        },
+        {
+            "City": "Dallas",
+            "Name": "Mavericks"
+        },
+        {
+            "City": "Golden State",
+            "Name": "Warriors"
+        },
+        {
+            "City": "Los Angeles",
+            "Name": "Lakers"
+        },
+        {
+            "City": "Los Angeles",
+            "Name": "Clippers"
+        },
+        {
+            "City": "Phoenix",
+            "Name": "Suns"
+        },
+        {
+            "City": "Sacramento",
+            "Name": "Kings"
+        }
+    ]
+}
