@@ -4,6 +4,9 @@ import chatLogo from "../assets/Frame 1216258384.svg";
 import { jwtDecode } from "jwt-decode";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import Swal from "sweetalert2";
 
 function ChatPage() {
   const [userName, setUserName] = useState("");
@@ -41,7 +44,9 @@ function ChatPage() {
 
   useEffect(() => {
     if (league && teamData[league]) {
-      const uniqueCities = [...new Set(teamData[league].map((team) => team.City))];
+      const uniqueCities = [
+        ...new Set(teamData[league].map((team) => team.City)),
+      ];
       setCities(uniqueCities);
       setSelectedTeamCity("");
       setSelectedTeamName("");
@@ -50,14 +55,18 @@ function ChatPage() {
 
   useEffect(() => {
     if (selectedTeamCity && teamData[league]) {
-      const foundTeam = teamData[league].find((team) => team.City === selectedTeamCity);
+      const foundTeam = teamData[league].find(
+        (team) => team.City === selectedTeamCity
+      );
       if (foundTeam) setSelectedTeamName(foundTeam.Name);
     }
   }, [selectedTeamCity]);
 
   useEffect(() => {
     if (opposingTeamCity && teamData[league]) {
-      const foundTeam = teamData[league].find((team) => team.City === opposingTeamCity);
+      const foundTeam = teamData[league].find(
+        (team) => team.City === opposingTeamCity
+      );
       if (foundTeam) setOpposingTeamName(foundTeam.Name);
     }
   }, [opposingTeamCity]);
@@ -83,60 +92,85 @@ function ChatPage() {
   };
 
   const handleDeleteConversation = async (conversationID) => {
-    if (!window.confirm("Are you sure you want to delete this conversation?")) return;
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
 
-    try {
-      const response = await fetch(
-        `http://localhost:3000/deleteConversation/${conversationID}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/deleteConversation/${conversationID}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to delete conversation.");
         }
-      );
 
-      if (!response.ok) {
-        throw new Error("Failed to delete conversation.");
+        setConversations((prev) =>
+          prev.filter((conv) => conv._id !== conversationID)
+        );
+
+        if (selectedConversation?._id === conversationID) {
+          setSelectedConversation(null);
+          setMessages([]);
+          localStorage.removeItem("currentConversationID");
+        }
+        toast.success("Conversation deleted successfully!");
+      } catch (error) {
+        console.error("Error deleting conversation:", error);
+        toast.error("Failed to delete conversation. Please try again.");
       }
-
-      setConversations((prev) =>
-        prev.filter((conv) => conv._id !== conversationID)
-      );
-
-      if (selectedConversation?._id === conversationID) {
-        setSelectedConversation(null);
-        setMessages([]);
-        localStorage.removeItem("currentConversationID");
-      }
-    } catch (error) {
-      console.error("Error deleting conversation:", error);
-      alert("Failed to delete conversation. Please try again.");
     }
   };
 
   const handleDeleteAllConversations = async () => {
-    if (!window.confirm("Are you sure you want to delete ALL conversations? This action cannot be undone.")) return;
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "This action cannot be undone!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete all!",
+    });
 
-    try {
-      const response = await fetch("http://localhost:3000/deleteConversations", {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(
+          "http://localhost:3000/deleteConversations",
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error("Failed to delete all conversations.");
+        if (!response.ok) {
+          throw new Error("Failed to delete all conversations.");
+        }
+
+        setConversations([]);
+        setSelectedConversation(null);
+        setMessages([]);
+        localStorage.removeItem("currentConversationID");
+        toast.success("All conversations deleted successfully!");
+      } catch (error) {
+        console.error("Error deleting all conversations:", error);
+        toast.error("Failed to delete all conversations. Please try again.");
       }
-
-      setConversations([]);
-      setSelectedConversation(null);
-      setMessages([]);
-      localStorage.removeItem("currentConversationID");
-    } catch (error) {
-      console.error("Error deleting all conversations:", error);
-      alert("Failed to delete all conversations. Please try again.");
     }
   };
 
@@ -197,7 +231,11 @@ function ChatPage() {
     e.preventDefault();
 
     const formattedDate = date
-      ? new Intl.DateTimeFormat("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }).format(date)
+      ? new Intl.DateTimeFormat("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        }).format(date)
       : "";
 
     const betData = {
@@ -228,10 +266,12 @@ function ChatPage() {
       if (!response.ok) {
         const errorData = await response.json();
         if (response.status === 401) {
-          alert("Session expired. Please log in again.");
+          toast.error("Session expired. Please log in again.");
           window.location.href = "/login";
         } else {
-          throw new Error(errorData.message || "Failed to submit the bet slip.");
+          throw new Error(
+            errorData.message || "Failed to submit the bet slip."
+          );
         }
       }
 
@@ -244,9 +284,10 @@ function ChatPage() {
       });
       setMessages([{ role: "assistant", content: data.analysis }]);
       await fetchConversations();
+      toast.success("Bet slip submitted successfully!");
     } catch (error) {
       console.error("Error submitting bet slip:", error.message);
-      alert(error.message);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -385,10 +426,10 @@ function ChatPage() {
           </button>
 
           <button
-            onClick={() => navigate("/upload-betting-history")}
+            onClick={() => navigate("/settings")}
             className="btn btn-outline-primary sidebar-btn"
           >
-            Upload Betting History
+            Settings
           </button>
         </div>
 
@@ -421,7 +462,9 @@ function ChatPage() {
                 style={{
                   ...styles.chatItem,
                   backgroundColor:
-                    selectedConversation?._id === conv._id ? "#1A73E8" : "transparent",
+                    selectedConversation?._id === conv._id
+                      ? "#1A73E8"
+                      : "transparent",
                 }}
                 onClick={() => {
                   handleSelectConversation(conv._id);
@@ -452,6 +495,9 @@ function ChatPage() {
           )}
         </div>
       </div>
+
+      {/* Add ToastContainer for notifications */}
+      <ToastContainer />
 
       {/* Main Chat Window */}
       <div

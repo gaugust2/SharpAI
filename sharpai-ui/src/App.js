@@ -5,10 +5,8 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import Login from "./components/Login";
 import SignUp from "./components/SignUp";
 import ChatPage from "./components/ChatPage";
-import BettingHistoryUploadPage from "./components/BettingHistoryUpload";
-import TermsOfService from './components/TermsOfService';
-import SettingsPage from './components/SettingsPage';
- 
+import TermsOfService from "./components/TermsOfService";
+import SettingsPage from "./components/SettingsPage";
 
 function App() {
   return (
@@ -19,11 +17,6 @@ function App() {
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/settings" element={<SettingsPage />} />
-
-        <Route
-          path="/upload-betting-history"
-          element={<BettingHistoryUploadPage />}
-        />
       </Routes>
     </Router>
   );
