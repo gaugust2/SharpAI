@@ -41,7 +41,9 @@ function ChatPage() {
 
   useEffect(() => {
     if (league && teamData[league]) {
-      const uniqueCities = [...new Set(teamData[league].map((team) => team.City))];
+      const uniqueCities = [
+        ...new Set(teamData[league].map((team) => team.City)),
+      ];
       setCities(uniqueCities);
       setSelectedTeamCity("");
       setSelectedTeamName("");
@@ -50,14 +52,18 @@ function ChatPage() {
 
   useEffect(() => {
     if (selectedTeamCity && teamData[league]) {
-      const foundTeam = teamData[league].find((team) => team.City === selectedTeamCity);
+      const foundTeam = teamData[league].find(
+        (team) => team.City === selectedTeamCity
+      );
       if (foundTeam) setSelectedTeamName(foundTeam.Name);
     }
   }, [selectedTeamCity]);
 
   useEffect(() => {
     if (opposingTeamCity && teamData[league]) {
-      const foundTeam = teamData[league].find((team) => team.City === opposingTeamCity);
+      const foundTeam = teamData[league].find(
+        (team) => team.City === opposingTeamCity
+      );
       if (foundTeam) setOpposingTeamName(foundTeam.Name);
     }
   }, [opposingTeamCity]);
@@ -83,7 +89,8 @@ function ChatPage() {
   };
 
   const handleDeleteConversation = async (conversationID) => {
-    if (!window.confirm("Are you sure you want to delete this conversation?")) return;
+    if (!window.confirm("Are you sure you want to delete this conversation?"))
+      return;
 
     try {
       const response = await fetch(
@@ -116,15 +123,23 @@ function ChatPage() {
   };
 
   const handleDeleteAllConversations = async () => {
-    if (!window.confirm("Are you sure you want to delete ALL conversations? This action cannot be undone.")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to delete ALL conversations? This action cannot be undone."
+      )
+    )
+      return;
 
     try {
-      const response = await fetch("http://localhost:3000/deleteConversations", {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        "http://localhost:3000/deleteConversations",
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to delete all conversations.");
@@ -197,7 +212,11 @@ function ChatPage() {
     e.preventDefault();
 
     const formattedDate = date
-      ? new Intl.DateTimeFormat("en-US", { month: "2-digit", day: "2-digit", year: "numeric" }).format(date)
+      ? new Intl.DateTimeFormat("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        }).format(date)
       : "";
 
     const betData = {
@@ -231,7 +250,9 @@ function ChatPage() {
           alert("Session expired. Please log in again.");
           window.location.href = "/login";
         } else {
-          throw new Error(errorData.message || "Failed to submit the bet slip.");
+          throw new Error(
+            errorData.message || "Failed to submit the bet slip."
+          );
         }
       }
 
@@ -354,102 +375,106 @@ function ChatPage() {
         className={`sidebar ${isSidebarOpen ? "show" : "hide"}`}
         style={styles.sidebar}
       >
-        {/* Close Button */}
-        <button
-          onClick={() => setIsSidebarOpen(false)}
-          className="btn btn-close close-btn"
-          style={styles.closeButton}
-        >
-          ✖
-        </button>
-
-        <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
-          SharpAI
-        </h1>
-        <div className="sidebar-buttons">
+        <div className="p-2">
+          {/* Close Button */}
           <button
-            onClick={() => {
-              setSelectedConversation(null);
-              setMessages([]);
-            }}
-            className="btn btn-primary sidebar-btn"
+            onClick={() => setIsSidebarOpen(false)}
+            className="btn btn-close close-btn"
+            style={styles.closeButton}
           >
-            + New Chat
+            ✖
           </button>
 
-          <button
-            onClick={handleLogout}
-            className="btn btn-outline-primary sidebar-btn"
-          >
-            Logout
-          </button>
+          <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
+            SharpAI
+          </h1>
+          <div className="sidebar-buttons">
+            <button
+              onClick={() => {
+                setSelectedConversation(null);
+                setMessages([]);
+              }}
+              className="btn btn-primary sidebar-btn"
+            >
+              + New Chat
+            </button>
 
-          <button
-            onClick={() => navigate("/upload-betting-history")}
-            className="btn btn-outline-primary sidebar-btn"
-          >
-            Upload Betting History
-          </button>
-        </div>
+            <button
+              onClick={handleLogout}
+              className="btn btn-outline-primary sidebar-btn mt-1"
+            >
+              Logout
+            </button>
 
-        <div style={styles.recentChats}>
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h2 className="fs-6" style={styles.recentTitle}>
-              Recent Conversations
-            </h2>
-
-            {conversations.length > 0 && (
-              <button
-                onClick={handleDeleteAllConversations}
-                className="btn btn-sm btn-outline-danger"
-                style={styles.deleteAllButton}
-              >
-                🗑️ Delete All
-              </button>
-            )}
+            <button
+              onClick={() => navigate("/upload-betting-history")}
+              className="btn btn-outline-primary sidebar-btn mt-1"
+            >
+              Upload Betting History
+            </button>
           </div>
 
-          {conversations.length === 0 ? (
-            <p style={{ color: "#bbb", fontSize: "14px" }}>
-              No previous conversations
-            </p>
-          ) : (
-            conversations.map((conv) => (
-              <div
-                key={conv._id}
-                className="d-flex justify-content-between align-items-center p-2"
-                style={{
-                  ...styles.chatItem,
-                  backgroundColor:
-                    selectedConversation?._id === conv._id ? "#1A73E8" : "transparent",
-                }}
-                onClick={() => {
-                  handleSelectConversation(conv._id);
-                  setIsSidebarOpen(false); // Close sidebar after selecting
-                }}
-              >
-                <div className="d-flex align-items-center flex-grow-1">
-                  <div className="me-2" style={styles.chatIcon}>
-                    📄
-                  </div>
-                  <span className="text-white" style={styles.chatText}>
-                    {conv.conversationName}
-                  </span>
-                </div>
+          <div style={styles.recentChats}>
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h2 className="fs-6" style={styles.recentTitle}>
+                Recent Conversations
+              </h2>
 
+              {conversations.length > 0 && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent chat selection
-                    handleDeleteConversation(conv._id);
-                  }}
-                  className="delete-btn"
-                  style={styles.deleteButton}
+                  onClick={handleDeleteAllConversations}
+                  className="btn btn-sm btn-outline-danger"
+                  style={styles.deleteAllButton}
                 >
-                  🗑️
+                  🗑️ Delete All
                 </button>
-              </div>
-            ))
-          )}
+              )}
+            </div>
+
+            {conversations.length === 0 ? (
+              <p style={{ color: "#bbb", fontSize: "14px" }}>
+                No previous conversations
+              </p>
+            ) : (
+              conversations.map((conv) => (
+                <div
+                  key={conv._id}
+                  className="d-flex justify-content-between align-items-center p-2"
+                  style={{
+                    ...styles.chatItem,
+                    backgroundColor:
+                      selectedConversation?._id === conv._id
+                        ? "#1A73E8"
+                        : "transparent",
+                  }}
+                  onClick={() => {
+                    handleSelectConversation(conv._id);
+                    setIsSidebarOpen(false); // Close sidebar after selecting
+                  }}
+                >
+                  <div className="d-flex align-items-center flex-grow-1">
+                    <div className="me-2" style={styles.chatIcon}>
+                      📄
+                    </div>
+                    <span className="text-white" style={styles.chatText}>
+                      {conv.conversationName}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent chat selection
+                      handleDeleteConversation(conv._id);
+                    }}
+                    className="delete-btn"
+                    style={styles.deleteButton}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
@@ -465,12 +490,12 @@ function ChatPage() {
             className="mb-4"
             style={styles.chatLogo}
           />
-          <h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
+          {selectedConversation || loading ? null : (<><h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
             Hello, {userName ? userName : "Guest"}✨
           </h2>
           <p className="fs-5" style={styles.subMessage}>
             Enter your bet details below:
-          </p>
+          </p></>)}
         </div>
 
         {loading ? (
@@ -632,7 +657,7 @@ function ChatPage() {
                   selected={date}
                   onChange={(selectedDate) => setDate(selectedDate)}
                   dateFormat="MM/dd/yyyy"
-                  className="form-control"
+                  className="form-control pl-4"
                   placeholderText="Select a date"
                   style={styles.inputBox}
                 />
