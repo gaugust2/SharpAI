@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 function SignUp() {
   const [email, setEmail] = useState("");
@@ -12,18 +13,26 @@ function SignUp() {
 
   useEffect(() => {
     // Check local storage for ToS acceptance
-    const tosStatus = localStorage.getItem('tosAccepted') === 'true';
+    const tosStatus = localStorage.getItem("tosAccepted") === "true";
     setTermsAccepted(tosStatus);
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords don't match");
+      Swal.fire({
+        icon: "error",
+        title: "Passwords don't match",
+        text: "Please make sure both passwords are the same.",
+      });
       return;
     }
     if (!termsAccepted) {
-      alert("You must accept the terms and conditions.");
+      Swal.fire({
+        icon: "warning",
+        title: "Terms not accepted",
+        text: "You must accept the terms and conditions.",
+      });
       return;
     }
 
@@ -44,15 +53,27 @@ function SignUp() {
       const data = await response.json();
 
       if (response.ok) {
-        alert(data.message);
-        localStorage.setItem('token', data.token); // Save token locally
-        navigate('/chat'); // Navigate to chat
-        localStorage.removeItem('tosAccepted'); // Clear ToS status
+        Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: data.message,
+        });
+        localStorage.setItem("token", data.token); // Save token locally
+        navigate("/chat"); // Navigate to chat
+        localStorage.removeItem("tosAccepted"); // Clear ToS status
       } else {
-        alert(data.message);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message,
+        });
       }
     } catch (error) {
-      alert("Something went wrong. Please try again.");
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Something went wrong. Please try again.",
+      });
     }
   };
 
@@ -139,11 +160,8 @@ function SignUp() {
             className="form-check-input"
           />
           <span style={styles.checkboxText}>
-            I accept SharpAI{' '}
-            <a
-              onClick={() => navigate('/terms')}
-              style={styles.link}
-            >
+            I accept SharpAI{" "}
+            <a onClick={() => navigate("/terms")} style={styles.link}>
               Terms & Conditions
             </a>
           </span>
@@ -177,13 +195,13 @@ const styles = {
     padding: "20px",
   },
   form: {
-    width: '100%',
-    maxWidth: '400px',
-    backgroundColor: '#071730',
-    padding: '30px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-    boxSizing: 'border-box',
+    width: "100%",
+    maxWidth: "400px",
+    backgroundColor: "#071730",
+    padding: "30px",
+    borderRadius: "10px",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+    boxSizing: "border-box",
   },
   header: {
     fontSize: "24px",
@@ -235,10 +253,10 @@ const styles = {
     color: "#bbbbbb",
   },
   link: {
-    color: '#4da6ff',
-    textDecoration: 'none',
-    fontWeight: 'bold',
-    cursor: 'pointer',
+    color: "#4da6ff",
+    textDecoration: "none",
+    fontWeight: "bold",
+    cursor: "pointer",
   },
   button: {
     width: "100%",
