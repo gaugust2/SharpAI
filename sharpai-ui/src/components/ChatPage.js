@@ -543,13 +543,13 @@ function ChatPage() {
               )}
             </div>
 
-            <h4>Messages:</h4>
             <div
-              className="chat-messages-container"
-              style={{ width: "100%", maxHeight: "500px", overflowY: "auto" }}
+              className="chat-messages-container rounded mb-2"
+              style={{ width: "100%", maxHeight: "500px", overflowY: "auto", backgroundColor: "rgb(65,65,65)" }}
             >
               {messages.map((msg, index) => (
                 <div
+                className="px-2"
                   key={index}
                   style={{
                     textAlign: msg.role === "user" ? "right" : "left",
