@@ -22,13 +22,13 @@ function Login() {
 
       if (response.ok) {
         alert(data.message);
-        localStorage.setItem("token", data.token);
-        navigate("/chat");
+        localStorage.setItem("token", data.token); // Save token to localStorage
+        navigate("/chat"); // Redirect to chat page
       } else {
-        alert(data.message);
+        alert(data.message); // Show error message
       }
     } catch (error) {
-      alert("Something went wrong. Please try again.");
+      alert("Something went wrong. Please try again."); // Handle network errors
     }
   };
 
@@ -39,13 +39,13 @@ function Login() {
           Welcome Back 👋
         </h2>
 
+        {/* Email Input */}
         <div style={styles.fieldContainer} className="mb-3">
           <label style={styles.label} className="form-label">
             Email*
           </label>
           <input
             type="email"
-            id="email"
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -54,13 +54,13 @@ function Login() {
           />
         </div>
 
+        {/* Password Input */}
         <div style={styles.fieldContainer} className="mb-3">
           <label style={styles.label} className="form-label">
             Password*
           </label>
           <input
             type="password"
-            id="password"
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -69,10 +69,12 @@ function Login() {
           />
         </div>
 
+        {/* Login Button */}
         <button type="submit" style={styles.button} className="btn btn-primary">
           Login
         </button>
 
+        {/* Sign Up Link */}
         <div style={styles.footer} className="mt-3 text-center">
           Don't have an account?{" "}
           <span
