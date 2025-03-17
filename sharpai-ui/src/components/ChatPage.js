@@ -102,6 +102,7 @@ function ChatPage() {
       confirmButtonText: "Yes, delete it!",
     });
 
+
     if (result.isConfirmed) {
       try {
         const response = await fetch(
@@ -395,104 +396,107 @@ function ChatPage() {
         className={`sidebar ${isSidebarOpen ? "show" : "hide"}`}
         style={styles.sidebar}
       >
-        {/* Close Button */}
-        <button
-          onClick={() => setIsSidebarOpen(false)}
-          className="btn btn-close close-btn"
-          style={styles.closeButton}
-        >
-          ✖
-        </button>
-
-        <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
-          SharpAI
-        </h1>
-        <div className="sidebar-buttons">
+        <div className="p-2">
+          {/* Close Button */}
           <button
-            onClick={() => {
-              setSelectedConversation(null);
-              setMessages([]);
-            }}
-            className="btn btn-primary sidebar-btn"
+            onClick={() => setIsSidebarOpen(false)}
+            className="btn btn-close close-btn"
+            style={styles.closeButton}
           >
-            + New Chat
+            ✖
           </button>
 
-          <button
-            onClick={handleLogout}
-            className="btn btn-outline-primary sidebar-btn"
-          >
-            Logout
-          </button>
+          <h1 className="fs-4 fw-bold mb-4" style={styles.title}>
+            SharpAI
+          </h1>
+          <div className="sidebar-buttons">
+            <button
+              onClick={() => {
+                setSelectedConversation(null);
+                setMessages([]);
+              }}
+              className="btn btn-primary sidebar-btn"
+            >
+              + New Chat
+            </button>
 
-          <button
-            onClick={() => navigate("/settings")}
-            className="btn btn-outline-primary sidebar-btn"
-          >
-            Settings
-          </button>
-        </div>
+            <button
+              onClick={handleLogout}
+              className="btn btn-outline-primary sidebar-btn mt-1"
+            >
+              Logout
+            </button>
 
-        <div style={styles.recentChats}>
-          <div className="d-flex justify-content-between align-items-center mb-2">
-            <h2 className="fs-6" style={styles.recentTitle}>
-              Recent Conversations
-            </h2>
-
-            {conversations.length > 0 && (
-              <button
-                onClick={handleDeleteAllConversations}
-                className="btn btn-sm btn-outline-danger"
-                style={styles.deleteAllButton}
-              >
-                🗑️ Delete All
-              </button>
-            )}
+            <button
+              onClick={() => navigate("/upload-betting-history")}
+              className="btn btn-outline-primary sidebar-btn mt-1"
+            >
+              Upload Betting History
+            </button>
           </div>
 
-          {conversations.length === 0 ? (
-            <p style={{ color: "#bbb", fontSize: "14px" }}>
-              No previous conversations
-            </p>
-          ) : (
-            conversations.map((conv) => (
-              <div
-                key={conv._id}
-                className="d-flex justify-content-between align-items-center p-2"
-                style={{
-                  ...styles.chatItem,
-                  backgroundColor:
-                    selectedConversation?._id === conv._id
-                      ? "#1A73E8"
-                      : "transparent",
-                }}
-                onClick={() => {
-                  handleSelectConversation(conv._id);
-                  setIsSidebarOpen(false); // Close sidebar after selecting
-                }}
-              >
-                <div className="d-flex align-items-center flex-grow-1">
-                  <div className="me-2" style={styles.chatIcon}>
-                    📄
-                  </div>
-                  <span className="text-white" style={styles.chatText}>
-                    {conv.conversationName}
-                  </span>
-                </div>
 
+          <div style={styles.recentChats}>
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h2 className="fs-6" style={styles.recentTitle}>
+                Recent Conversations
+              </h2>
+
+              {conversations.length > 0 && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent chat selection
-                    handleDeleteConversation(conv._id);
-                  }}
-                  className="delete-btn"
-                  style={styles.deleteButton}
+                  onClick={handleDeleteAllConversations}
+                  className="btn btn-sm btn-outline-danger"
+                  style={styles.deleteAllButton}
                 >
-                  🗑️
+                  🗑️ Delete All
                 </button>
-              </div>
-            ))
-          )}
+              )}
+            </div>
+
+            {conversations.length === 0 ? (
+              <p style={{ color: "#bbb", fontSize: "14px" }}>
+                No previous conversations
+              </p>
+            ) : (
+              conversations.map((conv) => (
+                <div
+                  key={conv._id}
+                  className="d-flex justify-content-between align-items-center p-2"
+                  style={{
+                    ...styles.chatItem,
+                    backgroundColor:
+                      selectedConversation?._id === conv._id
+                        ? "#1A73E8"
+                        : "transparent",
+                  }}
+                  onClick={() => {
+                    handleSelectConversation(conv._id);
+                    setIsSidebarOpen(false); // Close sidebar after selecting
+                  }}
+                >
+                  <div className="d-flex align-items-center flex-grow-1">
+                    <div className="me-2" style={styles.chatIcon}>
+                      📄
+                    </div>
+                    <span className="text-white" style={styles.chatText}>
+                      {conv.conversationName}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent chat selection
+                      handleDeleteConversation(conv._id);
+                    }}
+                    className="delete-btn"
+                    style={styles.deleteButton}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
@@ -511,12 +515,12 @@ function ChatPage() {
             className="mb-4"
             style={styles.chatLogo}
           />
-          <h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
+          {selectedConversation || loading ? null : (<><h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
             Hello, {userName ? userName : "Guest"}✨
           </h2>
           <p className="fs-5" style={styles.subMessage}>
             Enter your bet details below:
-          </p>
+          </p></>)}
         </div>
 
         {loading ? (
@@ -678,7 +682,7 @@ function ChatPage() {
                   selected={date}
                   onChange={(selectedDate) => setDate(selectedDate)}
                   dateFormat="MM/dd/yyyy"
-                  className="form-control"
+                  className="form-control pl-4"
                   placeholderText="Select a date"
                   style={styles.inputBox}
                 />
