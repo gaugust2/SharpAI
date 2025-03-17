@@ -76,25 +76,7 @@ function SettingsPage() {
           className="btn btn-primary mb-3"
           style={styles.newChatButton}
         >
-          + New Chat
-        </button>
-
-        <button
-          onClick={() => {
-            localStorage.removeItem("token"); // Clear the token
-            navigate("/login"); // Redirect to the login page
-          }}
-          className="btn btn-outline-primary mb-3"
-          style={styles.logoutButton}
-        >
-          Logout
-        </button>
-        <button
-          onClick={() => navigate("/settings")}
-          className="btn btn-outline-primary mb-3"
-          style={styles.settingsButton}
-        >
-          Settings
+          Back to Chat
         </button>
       </div>
 
