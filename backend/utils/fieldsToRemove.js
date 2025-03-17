@@ -218,8 +218,6 @@ const playerFieldsToRemove = [
 const projectionsFieldsToRemove = [
     "season",
     "week_name",
-    "away_team",
-    "home_team",
     "last_updated",
     "day",
     "date",

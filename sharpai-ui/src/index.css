@@ -11,3 +11,26 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+
+
+/* Sidebar Hidden by Default */
+.sidebar {
+  transform: translateX(-100%);
+}
+.sidebar.show {
+  transform: translateX(0);
+}
+
+/* Ensure Chat Window Takes Full Width When Sidebar is Hidden */
+@media (min-width: 769px) {
+  .chatWindow {
+    margin-left: 300px;
+  }
+}
+
+
+.sidebar-btn {
+  width: 100%; /* Full width */
+  text-align: center;
+}
