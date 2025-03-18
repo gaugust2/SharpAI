@@ -102,7 +102,6 @@ function ChatPage() {
       confirmButtonText: "Yes, delete it!",
     });
 
-
     if (result.isConfirmed) {
       try {
         const response = await fetch(
@@ -428,13 +427,12 @@ function ChatPage() {
             </button>
 
             <button
-              onClick={() => navigate("/upload-betting-history")}
+              onClick={() => navigate("/settings")}
               className="btn btn-outline-primary sidebar-btn mt-1"
             >
-              Upload Betting History
+              Settings
             </button>
           </div>
-
 
           <div style={styles.recentChats}>
             <div className="d-flex justify-content-between align-items-center mb-2">
@@ -515,12 +513,16 @@ function ChatPage() {
             className="mb-4"
             style={styles.chatLogo}
           />
-          {selectedConversation || loading ? null : (<><h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
-            Hello, {userName ? userName : "Guest"}✨
-          </h2>
-          <p className="fs-5" style={styles.subMessage}>
-            Enter your bet details below:
-          </p></>)}
+          {selectedConversation || loading ? null : (
+            <>
+              <h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
+                Hello, {userName ? userName : "Guest"}✨
+              </h2>
+              <p className="fs-5" style={styles.subMessage}>
+                Enter your bet details below:
+              </p>
+            </>
+          )}
         </div>
 
         {loading ? (
