@@ -1,0 +1,285 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+
+function SignUp() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [bettingBudget, setBettingBudget] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check local storage for ToS acceptance
+    const tosStatus = localStorage.getItem("tosAccepted") === "true";
+    setTermsAccepted(tosStatus);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      Swal.fire({
+        icon: "error",
+        title: "Passwords don't match",
+        text: "Please make sure both passwords are the same.",
+      });
+      return;
+    }
+    if (!termsAccepted) {
+      Swal.fire({
+        icon: "warning",
+        title: "Terms not accepted",
+        text: "You must accept the terms and conditions.",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:3000/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName,
+          email,
+          password,
+          bettingBudget: parseInt(bettingBudget, 10),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Swal.fire({
+          icon: "success",
+          title: "Success!",
+          text: data.message,
+        });
+        localStorage.setItem("token", data.token); // Save token locally
+        navigate("/chat"); // Navigate to chat
+        localStorage.removeItem("tosAccepted"); // Clear ToS status
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: data.message,
+        });
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Something went wrong. Please try again.",
+      });
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <form onSubmit={handleSubmit} style={styles.form} className="w-100">
+        <h2 style={styles.header} className="text-center fw-bold mb-3">
+          Get Started with SharpAI 👋
+        </h2>
+        <div style={styles.fieldContainer} className="mb-3">
+          <label style={styles.label} className="form-label">
+            First Name*
+          </label>
+          <input
+            type="text"
+            placeholder="Enter first name"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            style={styles.input}
+            className="form-control"
+          />
+        </div>
+        <div style={styles.fieldContainer} className="mb-3">
+          <label style={styles.label} className="form-label">
+            Betting Budget*
+          </label>
+          <input
+            type="number"
+            placeholder="Enter betting budget"
+            value={bettingBudget}
+            onChange={(e) => setBettingBudget(e.target.value)}
+            style={styles.input}
+            className="form-control"
+          />
+        </div>
+        <div style={styles.fieldContainer} className="mb-3">
+          <label style={styles.label} className="form-label">
+            Email*
+          </label>
+          <input
+            type="email"
+            placeholder="example@gmail.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={styles.input}
+            className="form-control"
+          />
+        </div>
+        <div style={styles.fieldContainer} className="mb-3">
+          <label style={styles.label} className="form-label">
+            Password*
+          </label>
+          <input
+            type="password"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={styles.input}
+            className="form-control"
+          />
+          <small style={styles.passwordHint}>
+            Contain a minimum of 8 characters
+          </small>
+        </div>
+        <div style={styles.fieldContainer} className="mb-3">
+          <label style={styles.label} className="form-label">
+            Confirm Password*
+          </label>
+          <input
+            type="password"
+            placeholder="Confirm password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            style={styles.input}
+            className="form-control"
+          />
+        </div>
+        <div style={styles.checkboxContainer} className="mb-3">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            style={styles.checkbox}
+            className="form-check-input"
+          />
+          <span style={styles.checkboxText}>
+            I accept SharpAI{" "}
+            <a onClick={() => navigate("/terms")} style={styles.link}>
+              Terms & Conditions
+            </a>
+          </span>
+        </div>
+        <button type="submit" style={styles.button} className="btn btn-primary">
+          Sign up
+        </button>
+        <div style={styles.footer} className="mt-3 text-center">
+          Already have an account?{" "}
+          <span
+            onClick={() => navigate("/")}
+            style={styles.loginLink}
+            className="cursor-pointer"
+          >
+            Login
+          </span>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+const styles = {
+  container: {
+    backgroundColor: "#0C111B",
+    color: "#ffffff",
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "20px",
+  },
+  form: {
+    width: "100%",
+    maxWidth: "400px",
+    backgroundColor: "#071730",
+    padding: "30px",
+    borderRadius: "10px",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.3)",
+    boxSizing: "border-box",
+  },
+  header: {
+    fontSize: "24px",
+    fontWeight: "bold",
+    marginBottom: "20px",
+    textAlign: "center",
+  },
+  fieldContainer: {
+    marginBottom: "20px",
+  },
+  label: {
+    display: "block",
+    fontSize: "14px",
+    marginBottom: "8px",
+    fontWeight: "bold",
+    color: "#bbbbbb",
+    textAlign: "left",
+  },
+  input: {
+    width: "100%",
+    padding: "10px",
+    borderRadius: "5px",
+    border: "1px solid #1C2639",
+    backgroundColor: "#1C2639",
+    color: "#fff",
+    fontSize: "14px",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  passwordHint: {
+    fontSize: "12px",
+    color: "#888",
+    marginTop: "8px",
+    textAlign: "left",
+    display: "block",
+  },
+  checkboxContainer: {
+    display: "flex",
+    alignItems: "center",
+    marginBottom: "20px",
+  },
+  checkbox: {
+    marginRight: "10px",
+    width: "16px",
+    height: "16px",
+  },
+  checkboxText: {
+    fontSize: "14px",
+    color: "#bbbbbb",
+  },
+  link: {
+    color: "#4da6ff",
+    textDecoration: "none",
+    fontWeight: "bold",
+    cursor: "pointer",
+  },
+  button: {
+    width: "100%",
+    padding: "12px",
+    border: "none",
+    borderRadius: "5px",
+    backgroundColor: "#0066ff",
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: "16px",
+    cursor: "pointer",
+  },
+  footer: {
+    marginTop: "20px",
+    textAlign: "center",
+    fontSize: "14px",
+    color: "#bbbbbb",
+  },
+  loginLink: {
+    color: "#4da6ff",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+};
+
+export default SignUp;
