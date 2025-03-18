@@ -211,6 +211,8 @@ function ChatPage() {
         throw new Error("Failed to fetch conversation details.");
       }
 
+      localStorage.setItem("currentConversationID", conversationID);
+
       const data = await response.json();
       setSelectedConversation({
         _id: conversationID,
