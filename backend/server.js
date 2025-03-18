@@ -7,7 +7,11 @@ const {
   getAIResponse,
   getAIStructuredResponse,
 } = require("./openaiService");
-const { analysisToString, mergeBetslips, checkEmptyFields } = require("./utils/helpers")
+const {
+  analysisToString,
+  mergeBetslips,
+  checkEmptyFields,
+} = require("./utils/helpers");
 const { sportsDataIOController } = require("./sportsDataIOService");
 const { authenticateToken } = require("./middleware");
 const mongoose = require("mongoose");
@@ -143,125 +147,138 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.delete("/deleteConversation/:conversationID", authenticateToken, async (req, res) => {
-  try {
-    const { conversationID } = req.params;
+app.delete(
+  "/deleteConversation/:conversationID",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const { conversationID } = req.params;
 
-    // Ensure the conversation belongs to the user before deleting
-    const deletedConversation = await Conversation.findOneAndDelete({
-      _id: conversationID,
-      userID: req.user.id,
-    });
+      // Ensure the conversation belongs to the user before deleting
+      const deletedConversation = await Conversation.findOneAndDelete({
+        _id: conversationID,
+        userID: req.user.id,
+      });
 
-    if (!deletedConversation) {
-      return res.status(404).json({ message: "Conversation not found or unauthorized" });
-    }
-
-    res.json({ message: "Conversation deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting conversation:", error);
-    res.status(500).json({ message: "Failed to delete conversation" });
-  }
-});
-
-app.post("/betslip", upload.single("file"), authenticateToken, async (req, res) => {
-  try {
-    // Step 1: Parse the form betslip & photo uploaded betslip
-    let formBetslip = req.body.formBetslip;
-    if (formBetslip) {
-        formBetslip = JSON.parse(formBetslip);
-    }
-
-    let imageBetslip;
-    if (req.file) {
-      let base64Image = null;
-
-      const filePath = req.file.path;
-
-      base64Image = fs.readFileSync(filePath, { encoding: "base64" });
-      fs.unlinkSync(filePath);
-
-      if (!base64Image) {
-        return res.status(400).json({ error: "Could not parse image" });
+      if (!deletedConversation) {
+        return res
+          .status(404)
+          .json({ message: "Conversation not found or unauthorized" });
       }
 
-      imageBetslip = JSON.parse(await getAIStructuredResponse(base64Image));
+      res.json({ message: "Conversation deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      res.status(500).json({ message: "Failed to delete conversation" });
     }
-
-    // Step 2: Merge the parsed betslips and check for missing fields
-    const mergedBetslip = mergeBetslips(formBetslip, imageBetslip)
-    const message = checkEmptyFields(mergedBetslip); //Return either an empty string, or an error string
-
-    if(message) {
-      return res.status(400).json({ message }) //If theres an empty field in the merged object, tell the user to fill in the missing fields in the form
-    }
-
-    console.log("Received betslip: ", { mergedBetslip });
-    const { league, selectedTeam, opposingTeam, date } = mergedBetslip;
-
-    // Step 3: Call sportsDataIOController to process the betslip
-    const externalData = await sportsDataIOController({
-      league,
-      selectedTeam,
-      opposingTeam,
-      date,
-    });
-
-    if (!Array.isArray(externalData) || externalData.length !== 5) {
-      return res.status(500).json({
-        message: "Expected externalData to be an array with 5 elements.",
-      });
-    }
-
-    // Step 4: Get user's betting budget
-    const bettingBudget = (await User.findById(req.user.id, "bettingBudget").exec()).bettingBudget
-
-    // Step 5: Perform analysis with the external data
-    const analysis = await getAnalysis(
-      { selectedTeam, opposingTeam }, //Add betting budget here
-      externalData,
-      bettingBudget
-    );
-
-    if (!analysis) {
-      return res.status(500).json({ message: "Failed to generate analysis" });
-    }
-
-    // Step 6: Create name for new conversation
-    const title = await getAIResponse(
-      [
-        {
-          role: "system",
-          content:
-            "Provide a 3-5 word conclusion based on the analysis provided.",
-        },
-        {
-          role: "assistant",
-          content: analysisToString(analysis),
-        },
-      ],
-      0.9
-    );
-
-    // Step 7: Create new Conversation in MongoDB
-    const newConversation = new Conversation({
-      conversationName: `${title} - ${date}`,
-      userID: req.user.id,
-      analysis: analysis,
-    });
-    const conversationID = (await newConversation.save())._id.toString();
-
-    console.log("Analysis generated:", analysis);
-
-    // Step 8: Respond with the analysis result
-    res.status(200).json({ conversationID, analysis });
-  } catch (error) {
-    console.error("Error in /betslip:", error.message);
-    res
-      .status(500)
-      .json({ message: `Failed to process betslip: ${error.message}` });
   }
-});
+);
+
+app.post(
+  "/betslip",
+  upload.single("file"),
+  authenticateToken,
+  async (req, res) => {
+    try {
+      // Step 1: Parse the form betslip & photo uploaded betslip
+      let formBetslip = req.body.formBetslip;
+      if (formBetslip) {
+        formBetslip = JSON.parse(formBetslip);
+      }
+
+      let imageBetslip;
+      if (req.file) {
+        let base64Image = null;
+
+        const filePath = req.file.path;
+
+        base64Image = fs.readFileSync(filePath, { encoding: "base64" });
+        fs.unlinkSync(filePath);
+
+        if (!base64Image) {
+          return res.status(400).json({ error: "Could not parse image" });
+        }
+
+        imageBetslip = JSON.parse(await getAIStructuredResponse(base64Image));
+      }
+
+      // Step 2: Merge the parsed betslips and check for missing fields
+      const mergedBetslip = mergeBetslips(formBetslip, imageBetslip);
+      const message = checkEmptyFields(mergedBetslip); //Return either an empty string, or an error string
+
+      if (message) {
+        return res.status(400).json({ message }); //If theres an empty field in the merged object, tell the user to fill in the missing fields in the form
+      }
+
+      console.log("Received betslip: ", { mergedBetslip });
+      const { league, selectedTeam, opposingTeam, date } = mergedBetslip;
+
+      // Step 3: Call sportsDataIOController to process the betslip
+      const externalData = await sportsDataIOController({
+        league,
+        selectedTeam,
+        opposingTeam,
+        date,
+      });
+
+      if (!Array.isArray(externalData) || externalData.length !== 5) {
+        return res.status(500).json({
+          message: "Expected externalData to be an array with 5 elements.",
+        });
+      }
+
+      // Step 4: Get user's betting budget
+      const bettingBudget = (
+        await User.findById(req.user.id, "bettingBudget").exec()
+      ).bettingBudget;
+
+      // Step 5: Perform analysis with the external data
+      const analysis = await getAnalysis(
+        { selectedTeam, opposingTeam }, //Add betting budget here
+        externalData,
+        bettingBudget
+      );
+
+      if (!analysis) {
+        return res.status(500).json({ message: "Failed to generate analysis" });
+      }
+
+      // Step 6: Create name for new conversation
+      const title = await getAIResponse(
+        [
+          {
+            role: "system",
+            content:
+              "Provide a 3-5 word conclusion based on the analysis provided.",
+          },
+          {
+            role: "assistant",
+            content: analysisToString(analysis),
+          },
+        ],
+        0.9
+      );
+
+      // Step 7: Create new Conversation in MongoDB
+      const newConversation = new Conversation({
+        conversationName: `${title} - ${date}`,
+        userID: req.user.id,
+        analysis: analysis,
+      });
+      const conversationID = (await newConversation.save())._id.toString();
+
+      console.log("Analysis generated:", analysis);
+
+      // Step 8: Respond with the analysis result
+      res.status(200).json({ conversationID, analysis });
+    } catch (error) {
+      console.error("Error in /betslip:", error.message);
+      res
+        .status(500)
+        .json({ message: `Failed to process betslip: ${error.message}` });
+    }
+  }
+);
 
 app.post("/chat", authenticateToken, async (req, res) => {
   try {
@@ -307,7 +324,7 @@ app.post("/chat", authenticateToken, async (req, res) => {
     const assistantMessage = await getAIResponse(messages);
 
     if (!assistantMessage) {
-      return res.status(500).json({ message: "Assistant failed to respond." });
+      return res.status(500).json({ error: "Assistant failed to respond." });
     }
 
     // Step 6: Store assistant's message in MongoDB
@@ -315,13 +332,13 @@ app.post("/chat", authenticateToken, async (req, res) => {
       $push: { messages: { role: "assistant", content: assistantMessage } },
     });
 
-    // Step 7: Respond with the assistant's message
-    res.status(200).send(assistantMessage);
+    // Step 7: Respond with the assistant's message in JSON format
+    res.status(200).json({ response: assistantMessage }); // Always return JSON
   } catch (error) {
     console.error("Error in /chat:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to process message: ${error.message}` });
+      .json({ error: `Failed to process message: ${error.message}` }); // Always return JSON
   }
 });
 
@@ -337,11 +354,9 @@ app.get("/conversationNames", authenticateToken, async (req, res) => {
     res.json({ conversations });
   } catch (error) {
     console.error("Error in /conversationNames:", error.message);
-    res
-      .status(500)
-      .json({
-        message: `Failed to return conversation names: ${error.message}`,
-      });
+    res.status(500).json({
+      message: `Failed to return conversation names: ${error.message}`,
+    });
   }
 });
 
@@ -364,11 +379,9 @@ app.get("/conversation", authenticateToken, async (req, res) => {
     res.json({ conversation });
   } catch (error) {
     console.error("Error in /conversationNames:", error.message);
-    res
-      .status(500)
-      .json({
-        message: `Failed to return conversation names: ${error.message}`,
-      });
+    res.status(500).json({
+      message: `Failed to return conversation names: ${error.message}`,
+    });
   }
 });
 
@@ -381,11 +394,11 @@ app.delete("/deleteConversations", authenticateToken, async (req, res) => {
     res.json({ message: "All conversations deleted successfully" });
   } catch (error) {
     console.error("Error in /deleteConversations:", error.message);
-    res
-      .status(500)
-      .json({ message: `Failed to return conversation names: ${error.message}` });
+    res.status(500).json({
+      message: `Failed to return conversation names: ${error.message}`,
+    });
   }
-})
+});
 
 // This is a "Catch all route" - Handle any unknown routes (React routes)
 app.get("*", (req, res) => {

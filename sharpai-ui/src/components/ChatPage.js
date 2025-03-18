@@ -37,6 +37,10 @@ function ChatPage() {
       .catch((error) => console.error("Error loading team names:", error));
   }, []);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(files);
@@ -319,12 +323,35 @@ function ChatPage() {
 
     setIsSending(true);
     const userMessage = { role: "user", content: newMessage };
-    const tempMessages = [...messages, userMessage];
-    setMessages(tempMessages);
-    setNewMessage("");
+    const typingMessage = {
+      role: "assistant",
+      content: "SharpAI is thinking...",
+      isTyping: true,
+    };
+    const messageToSend = newMessage; // Store the message for sending
+
+    // Add user message immediately
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      userMessage,
+      typingMessage,
+    ]);
+    setNewMessage(""); // Clear input field
 
     try {
       const conversationID = localStorage.getItem("currentConversationID");
+      console.log(
+        "Sending message to server with conversationID:",
+        conversationID
+      );
+
+      if (!conversationID) {
+        console.error("No conversationID found in localStorage");
+        throw new Error(
+          "No active conversation. Please refresh and try again."
+        );
+      }
+
       const response = await fetch("http://localhost:3000/chat", {
         method: "POST",
         headers: {
@@ -332,31 +359,102 @@ function ChatPage() {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
           "conversation-id": conversationID,
         },
-        body: JSON.stringify({ message: newMessage }),
+        body: JSON.stringify({ message: messageToSend }),
       });
 
+      // Log the raw response for debugging
+      const rawResponse = await response.text();
+      console.log("Raw server response:", rawResponse);
+
       if (!response.ok) {
-        throw new Error("Failed to send message");
+        throw new Error(`Server error: ${response.status}`);
       }
 
-      const data = await response.json();
+      // Parse the JSON response
+      let data;
+      try {
+        data = JSON.parse(rawResponse); // Parse the response as JSON
+      } catch (error) {
+        console.error("Failed to parse JSON response:", error);
+        throw new Error("Invalid response from server");
+      }
+
+      // Handle the response
       if (data && data.response) {
-        setMessages([
-          ...tempMessages,
+        // Remove the typing indicator
+        setMessages((prevMessages) =>
+          prevMessages.filter((msg) => !msg.isTyping)
+        );
+
+        // Add the actual response
+        setMessages((prevMessages) => [
+          ...prevMessages,
           { role: "assistant", content: data.response },
         ]);
+      } else {
+        console.error("Invalid response format:", data);
+        throw new Error("Invalid response from server");
       }
+
+      // Refresh the conversation after 2 seconds as a backup
+      setTimeout(refreshCurrentConversation, 2000);
     } catch (error) {
-      console.error("Error sending message:", error);
-      setMessages(messages);
+      console.error("Error in sendMessage:", error.message);
+
+      // Remove the typing indicator
+      setMessages((prevMessages) =>
+        prevMessages.filter((msg) => !msg.isTyping)
+      );
+
+      // Add an error message
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          role: "assistant",
+          content: `Error: ${error.message}. Please try refreshing the page if the problem persists.`,
+        },
+      ]);
     } finally {
       setIsSending(false);
     }
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const refreshCurrentConversation = async () => {
+    try {
+      const conversationID = localStorage.getItem("currentConversationID");
+      if (!conversationID) return;
+
+      console.log("Refreshing conversation data for ID:", conversationID);
+
+      const response = await fetch("http://localhost:3000/conversation", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+          "conversation-id": conversationID,
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Failed to refresh conversation:", response.status);
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Refreshed conversation data:", data);
+
+      if (data && data.conversation && data.conversation.messages) {
+        // Update the conversation and messages
+        setSelectedConversation({
+          _id: conversationID,
+          conversationName: data.conversation.conversationName,
+          analysis: data.conversation.analysis || {},
+        });
+        setMessages(data.conversation.messages);
+      }
+    } catch (error) {
+      console.error("Error refreshing conversation:", error);
+    }
+  };
 
   const formatSectionName = (name) => {
     let formattedName = name
@@ -532,7 +630,9 @@ function ChatPage() {
           </div>
         ) : selectedConversation && selectedConversation.analysis ? (
           <div className="mt-3" style={{ width: "100%" }}>
-            <h3>{selectedConversation.conversationName}</h3>
+            <div className="d-flex align-items-center">
+              <h3>{selectedConversation.conversationName}</h3>
+            </div>
             <h4>Analysis:</h4>
             <div className="response-text">
               {Object.entries(selectedConversation.analysis).map(
