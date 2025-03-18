@@ -223,7 +223,6 @@ function ChatPage() {
         analysis: data.conversation.analysis || {},
       });
       const tempMsg = { role: "assistant", content: data.conversation.analysis };
-      //setMessages(data.conversation.messages || []);
       setMessages([tempMsg, ...data.conversation.messages || []])
     } catch (error) {
       console.error("Error fetching conversation details:", error);
@@ -316,7 +315,8 @@ function ChatPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data && data.conversation) {
-          setMessages(data.conversation.messages);
+          const tempMsg = { role: "assistant", content: data.conversation.analysis };
+          setMessages([tempMsg, ...data.conversation.messages || []])
         }
       })
       .catch((error) => console.error("Error fetching messages:", error));
@@ -453,7 +453,8 @@ function ChatPage() {
           conversationName: data.conversation.conversationName,
           analysis: data.conversation.analysis || {},
         });
-        setMessages(data.conversation.messages);
+        const tempMsg = { role: "assistant", content: data.conversation.analysis };
+        setMessages([tempMsg, ...data.conversation.messages || []])
       }
     } catch (error) {
       console.error("Error refreshing conversation:", error);
