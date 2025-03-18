@@ -217,7 +217,9 @@ function ChatPage() {
         conversationName: data.conversation.conversationName,
         analysis: data.conversation.analysis || {},
       });
-      setMessages(data.conversation.messages || []);
+      const tempMsg = { role: "assistant", content: data.conversation.analysis };
+      //setMessages(data.conversation.messages || []);
+      setMessages([tempMsg, ...data.conversation.messages || []])
     } catch (error) {
       console.error("Error fetching conversation details:", error);
     }
@@ -509,13 +511,14 @@ function ChatPage() {
         style={styles.chatWindow}
       >
         <div className="text-center mb-auto" style={styles.welcomeContainer}>
-          <img
+          
+          {selectedConversation || loading ? null : (<><img
             src={chatLogo}
             alt="Chat Logo"
             className="mb-4"
             style={styles.chatLogo}
           />
-          {selectedConversation || loading ? null : (<><h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
+          <h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
             Hello, {userName ? userName : "Guest"}✨
           </h2>
           <p className="fs-5" style={styles.subMessage}>
@@ -529,23 +532,14 @@ function ChatPage() {
             <p style={styles.loadingText}>Analyzing your bet...</p>
           </div>
         ) : selectedConversation && selectedConversation.analysis ? (
-          <div className="mt-3" style={{ width: "100%" }}>
+          <div className="mb-8" style={{ width: "100%" }}>
             <h3>{selectedConversation.conversationName}</h3>
-            <h4>Analysis:</h4>
             <div className="response-text">
-              {Object.entries(selectedConversation.analysis).map(
-                ([key, value]) => (
-                  <div key={key}>
-                    <strong>{formatSectionName(key)}:</strong>
-                    <p>{value}</p>
-                  </div>
-                )
-              )}
             </div>
 
             <div
-              className="chat-messages-container rounded mb-2"
-              style={{ width: "100%", maxHeight: "500px", overflowY: "auto", backgroundColor: "rgb(65,65,65)" }}
+              className="chat-messages-container py-5"
+              style={{ width: "100%", overflowY: "auto" }}
             >
               {messages.map((msg, index) => (
                 <div
@@ -558,12 +552,12 @@ function ChatPage() {
                 >
                   <span
                     style={{
-                      backgroundColor: msg.role === "user" ? "#0066ff" : "#333",
+                      backgroundColor: msg.role === "user" ? "rgb(50,50,50)" : "",
                       color: "#fff",
-                      padding: "10px",
+                      padding: "8px",
                       borderRadius: "8px",
                       display: "inline-block",
-                      maxWidth: "60%",
+                      maxWidth: "100%",
                     }}
                   >
                     {typeof msg.content === "object" ? (
@@ -585,7 +579,8 @@ function ChatPage() {
             </div>
 
             {/* Chat Input Field */}
-            <div style={styles.chatInput}>
+            <div className="position-fixed bottom-0 start-50 translate-middle-x w-100 px-3 pb-4"
+             style={styles.chatInput}>
               <input
                 type="text"
                 value={newMessage}
