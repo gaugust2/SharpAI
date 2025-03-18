@@ -1,0 +1,47 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'  # Trigger only when backend files change
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Start EC2 instance
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY_PAIR }}
+          script: |
+            sudo aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+            sleep 60 # Wait for instance to start
+
+      - name: Deploy backend to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY_PAIR }}
+          script: |
+            cd /home/ec2-user/SharpAI
+            git pull origin main
+            cd backend
+            npm install
+            pm2 restart backend
+
+      - name: Stop EC2 instance
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ec2-user
+          key: ${{ secrets.EC2_KEY_PAIR }}
+          script: |
+            sudo aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
