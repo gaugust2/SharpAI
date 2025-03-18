@@ -70,7 +70,7 @@ function Login() {
         </div>
 
         <button type="submit" style={styles.button} className="btn btn-primary">
-          Login
+          Loginverihrohvi
         </button>
 
         <div style={styles.footer} className="mt-3 text-center">

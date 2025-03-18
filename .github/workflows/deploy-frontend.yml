@@ -1,0 +1,35 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'sharpai-ui/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          cd sharpai-ui
+          npm install
+
+      - name: Build frontend
+        run: |
+          cd sharpai-ui
+          npm run build
+
+      - name: Deploy to S3
+        uses: jakejarvis/s3-sync-action@v2
+        with:
+          args: --acl public-read --delete
+        env:
+          AWS_S3_BUCKET: sharpai-bucket
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          SOURCE_DIR: "sharpai-ui/build"
