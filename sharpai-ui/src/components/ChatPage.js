@@ -77,7 +77,7 @@ function ChatPage() {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch("http://localhost:3000/conversationNames", {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversationNames`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -109,7 +109,7 @@ function ChatPage() {
     if (result.isConfirmed) {
       try {
         const response = await fetch(
-          `http://localhost:3000/deleteConversation/${conversationID}`,
+          `${process.env.REACT_APP_BACKEND_URL}:3000/deleteConversation/${conversationID}`,
           {
             method: "DELETE",
             headers: {
@@ -153,7 +153,7 @@ function ChatPage() {
     if (result.isConfirmed) {
       try {
         const response = await fetch(
-          "http://localhost:3000/deleteConversations",
+          `${process.env.REACT_APP_BACKEND_URL}:3000/deleteConversations`,
           {
             method: "DELETE",
             headers: {
@@ -202,7 +202,7 @@ function ChatPage() {
 
   const handleSelectConversation = async (conversationID) => {
     try {
-      const response = await fetch("http://localhost:3000/conversation", {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversation`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -262,7 +262,7 @@ function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/betslip", {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/betslip`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -304,7 +304,7 @@ function ChatPage() {
     const conversationID = localStorage.getItem("currentConversationID");
     if (!conversationID) return;
 
-    fetch(`http://localhost:3000/conversation`, {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversation`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -356,7 +356,7 @@ function ChatPage() {
         );
       }
 
-      const response = await fetch("http://localhost:3000/chat", {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -430,7 +430,7 @@ function ChatPage() {
 
       console.log("Refreshing conversation data for ID:", conversationID);
 
-      const response = await fetch("http://localhost:3000/conversation", {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversation`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
