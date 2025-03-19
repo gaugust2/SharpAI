@@ -424,7 +424,6 @@ const LEAGUE_ENDPOINTS = {
   NBA: "https://api.sportsdata.io/v3/nba/scores/json/GamesByDate",
   NFL: "https://api.sportsdata.io/v3/nfl/scores/json/GamesByDate",
   MLB: "https://api.sportsdata.io/v3/mlb/scores/json/GamesByDate",
-  NHL: "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate",
 };
 
 // Get today's date in `YYYY-MMM-DD` format (e.g., 2025-MAR-19)

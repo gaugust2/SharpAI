@@ -4,18 +4,13 @@ import Swal from "sweetalert2"; // Import SweetAlert2
 
 function SettingsPage() {
   const navigate = useNavigate();
-  const [tosAccepted, setTosAccepted] = useState(false);
   const [theme, setTheme] = useState("light");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   useEffect(() => {
-    // Load saved preferences from local storage
-    const tosStatus = localStorage.getItem("tosAccepted") === "true";
     const savedTheme = localStorage.getItem("theme") || "light";
     const savedNotifications =
       localStorage.getItem("notificationsEnabled") === "true";
-
-    setTosAccepted(tosStatus);
     setTheme(savedTheme);
     setNotificationsEnabled(savedNotifications);
   }, []);
@@ -58,6 +53,45 @@ function SettingsPage() {
     });
   };
 
+  const handleDeleteAccount = async () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "Once deleted, your account cannot be recovered!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          // Make the DELETE request to delete the user
+          const response = await fetch(
+            `${process.env.REACT_APP_BACKEND_URL}:3000/deleteUser`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+
+          // Check if the response is successful
+          if (response.ok) {
+            const data = await response.json();
+            Swal.fire("Deleted!", data.message, "success");
+            localStorage.clear(); // Clear localStorage data
+            navigate("/"); // Redirect to the login page after deletion
+          } else {
+            throw new Error("Failed to delete account");
+          }
+        } catch (error) {
+          Swal.fire("Error", error.message, "error");
+        }
+      }
+    });
+  };
+
   return (
     <div
       style={{
@@ -84,9 +118,7 @@ function SettingsPage() {
       <div style={styles.settingsContent}>
         <h2 style={styles.header}>Settings</h2>
         <div style={styles.setting}>
-          <span>
-            Terms of Service: {tosAccepted ? "Accepted" : "Not Accepted"}
-          </span>
+          <span>Terms of Service: Accepted</span>
           <button onClick={handleRevisitTos} style={styles.button}>
             View Terms
           </button>
@@ -113,6 +145,12 @@ function SettingsPage() {
             Reset Settings
           </button>
         </div>
+        {/* Delete Account Button */}
+        <div style={styles.setting}>
+          <button onClick={handleDeleteAccount} style={styles.deleteButton}>
+            Delete Account
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -121,96 +159,63 @@ function SettingsPage() {
 const styles = {
   container: {
     display: "flex",
-    minHeight: "100vh",
+    flexDirection: "row",
+    height: "100vh",
   },
   sidebar: {
-    width: "300px",
-    backgroundColor: "#071730",
+    width: "250px",
+    backgroundColor: "#1C2639",
+    color: "#ffffff",
   },
   title: {
     fontSize: "24px",
     fontWeight: "bold",
-    marginBottom: "20px",
+    color: "#ffffff",
   },
   newChatButton: {
-    backgroundColor: "#0066ff",
+    backgroundColor: "#007BFF",
     color: "#ffffff",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
-    marginBottom: "30px",
-  },
-  logoutButton: {
-    backgroundColor: "#ffffff",
-    color: "#0066ff",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
-    marginBottom: "30px",
-  },
-  uploadHistoryButton: {
-    backgroundColor: "#ffffff",
-    color: "#0066ff",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
-    marginBottom: "30px",
-  },
-  settingsButton: {
-    backgroundColor: "#ffffff",
-    color: "#0066ff",
-    padding: "10px 20px",
-    borderRadius: "5px",
-    border: "none",
-    cursor: "pointer",
-    fontSize: "14px",
-    fontWeight: "bold",
-    marginBottom: "30px",
   },
   settingsContent: {
-    flex: 1,
     padding: "20px",
+    flex: 1,
   },
   header: {
-    fontSize: "24px",
-    fontWeight: "bold",
+    fontSize: "22px",
     marginBottom: "20px",
   },
   setting: {
     marginBottom: "20px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
   },
   button: {
-    padding: "10px 15px",
-    backgroundColor: "#0066ff",
+    backgroundColor: "#007BFF",
     color: "#ffffff",
+    padding: "8px 15px",
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
-  },
-  resetButton: {
-    padding: "10px 15px",
-    backgroundColor: "#ff0033",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "5px",
-    cursor: "pointer",
-    fontWeight: "bold",
   },
   select: {
-    padding: "5px",
+    padding: "8px 15px",
     borderRadius: "5px",
+    border: "1px solid #ccc",
+  },
+  resetButton: {
+    backgroundColor: "#ffc107",
+    color: "#fff",
+    padding: "8px 15px",
+    border: "none",
+    cursor: "pointer",
+  },
+  deleteButton: {
+    backgroundColor: "#ff0000", // Bright red
+    color: "#fff",
+    padding: "8px 15px", // Same padding as the reset button
+    border: "none",
+    borderRadius: "5px", // Optional: rounded corners
+    cursor: "pointer",
+    fontWeight: "bold", // Make the text bold
+    textAlign: "center", // Ensure text is centered
   },
 };
 

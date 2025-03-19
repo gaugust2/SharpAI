@@ -767,7 +767,6 @@ function ChatPage() {
                   <option value="NBA">NBA</option>
                   <option value="NFL">NFL</option>
                   <option value="MLB">MLB</option>
-                  <option value="NHL">NHL</option>
                 </select>
 
                 {/* Schedule Display */}
@@ -775,25 +774,68 @@ function ChatPage() {
                   <div
                     className="schedule-container"
                     style={{
-                      marginTop: "20px",
-                      padding: "10px",
+                      marginTop: "10px",
+                      padding: "8px",
                       backgroundColor: "#1c2639",
                       color: "white",
-                      borderRadius: "8px",
+                      borderRadius: "6px",
+                      fontSize: "14px", // Smaller font size
+                      maxHeight: "250px", // Set a max height
+                      overflowY: "auto", // Enable scrolling
                     }}
                   >
-                    <h3>Today's Schedule for {league}</h3>
+                    <h3
+                      style={{
+                        textAlign: "center",
+                        fontSize: "16px",
+                        marginBottom: "5px",
+                      }}
+                    >
+                      Today's Schedule for {league}
+                    </h3>
                     {schedule.length > 0 ? (
-                      <ul>
+                      <ul
+                        style={{
+                          listStyleType: "none",
+                          padding: "0",
+                          margin: "0",
+                        }}
+                      >
                         {schedule.map((game, index) => (
-                          <li key={index}>
-                            {game.HomeTeam} vs {game.AwayTeam} at{" "}
-                            {new Date(game.DateTime).toLocaleTimeString()}
+                          <li
+                            key={index}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "5px 10px", // Smaller padding
+                              borderBottom:
+                                "1px solid rgba(255, 255, 255, 0.2)",
+                            }}
+                          >
+                            <span>
+                              {game.HomeTeam} vs {game.AwayTeam}
+                            </span>
+                            <span>
+                              {new Date(game.DateTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </span>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <p>No games scheduled for today.</p>
+                      <p
+                        style={{
+                          textAlign: "center",
+                          color: "#ccc",
+                          fontSize: "12px",
+                        }}
+                      >
+                        No games scheduled for today.
+                      </p>
                     )}
                   </div>
                 )}
