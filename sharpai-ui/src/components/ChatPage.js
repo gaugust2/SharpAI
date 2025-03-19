@@ -29,6 +29,7 @@ function ChatPage() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [schedule, setSchedule] = useState([]);
 
   useEffect(() => {
     fetch("/teamNames.json")
@@ -75,14 +76,45 @@ function ChatPage() {
     }
   }, [opposingTeamCity]);
 
+  useEffect(() => {
+    if (league) {
+      fetchSchedule(league);
+    }
+  }, [league]);
+
+  const fetchSchedule = async (selectedLeague) => {
+    setSchedule([]);
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/schedule?league=${selectedLeague}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch schedule.");
+      }
+
+      const data = await response.json();
+      console.log("Fetched schedule data:", data);
+
+      setSchedule(data.games.length > 0 ? data.games : []);
+    } catch (error) {
+      console.error("Error fetching schedule:", error);
+      setSchedule([]);
+    }
+  };
+
   const fetchConversations = async () => {
     try {
-      const response = await fetch("http://localhost:3000/conversationNames", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/conversationNames`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch conversations.");
@@ -109,7 +141,7 @@ function ChatPage() {
     if (result.isConfirmed) {
       try {
         const response = await fetch(
-          `http://localhost:3000/deleteConversation/${conversationID}`,
+          `${process.env.REACT_APP_BACKEND_URL}:3000/deleteConversation/${conversationID}`,
           {
             method: "DELETE",
             headers: {
@@ -153,7 +185,7 @@ function ChatPage() {
     if (result.isConfirmed) {
       try {
         const response = await fetch(
-          "http://localhost:3000/deleteConversations",
+          `${process.env.REACT_APP_BACKEND_URL}:3000/deleteConversations`,
           {
             method: "DELETE",
             headers: {
@@ -202,13 +234,16 @@ function ChatPage() {
 
   const handleSelectConversation = async (conversationID) => {
     try {
-      const response = await fetch("http://localhost:3000/conversation", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "conversation-id": conversationID,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/conversation`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "conversation-id": conversationID,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch conversation details.");
@@ -222,8 +257,11 @@ function ChatPage() {
         conversationName: data.conversation.conversationName,
         analysis: data.conversation.analysis || {},
       });
-      const tempMsg = { role: "assistant", content: data.conversation.analysis };
-      setMessages([tempMsg, ...data.conversation.messages || []])
+      const tempMsg = {
+        role: "assistant",
+        content: data.conversation.analysis,
+      };
+      setMessages([tempMsg, ...(data.conversation.messages || [])]);
     } catch (error) {
       console.error("Error fetching conversation details:", error);
     }
@@ -262,13 +300,16 @@ function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:3000/betslip", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/betslip`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -304,7 +345,7 @@ function ChatPage() {
     const conversationID = localStorage.getItem("currentConversationID");
     if (!conversationID) return;
 
-    fetch(`http://localhost:3000/conversation`, {
+    fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversation`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -315,8 +356,11 @@ function ChatPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data && data.conversation) {
-          const tempMsg = { role: "assistant", content: data.conversation.analysis };
-          setMessages([tempMsg, ...data.conversation.messages || []])
+          const tempMsg = {
+            role: "assistant",
+            content: data.conversation.analysis,
+          };
+          setMessages([tempMsg, ...(data.conversation.messages || [])]);
         }
       })
       .catch((error) => console.error("Error fetching messages:", error));
@@ -356,15 +400,18 @@ function ChatPage() {
         );
       }
 
-      const response = await fetch("http://localhost:3000/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "conversation-id": conversationID,
-        },
-        body: JSON.stringify({ message: messageToSend }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "conversation-id": conversationID,
+          },
+          body: JSON.stringify({ message: messageToSend }),
+        }
+      );
 
       // Log the raw response for debugging
       const rawResponse = await response.text();
@@ -430,13 +477,16 @@ function ChatPage() {
 
       console.log("Refreshing conversation data for ID:", conversationID);
 
-      const response = await fetch("http://localhost:3000/conversation", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "conversation-id": conversationID,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/conversation`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "conversation-id": conversationID,
+          },
+        }
+      );
 
       if (!response.ok) {
         console.error("Failed to refresh conversation:", response.status);
@@ -453,8 +503,11 @@ function ChatPage() {
           conversationName: data.conversation.conversationName,
           analysis: data.conversation.analysis || {},
         });
-        const tempMsg = { role: "assistant", content: data.conversation.analysis };
-        setMessages([tempMsg, ...data.conversation.messages || []])
+        const tempMsg = {
+          role: "assistant",
+          content: data.conversation.analysis,
+        };
+        setMessages([tempMsg, ...(data.conversation.messages || [])]);
       }
     } catch (error) {
       console.error("Error refreshing conversation:", error);
@@ -610,19 +663,22 @@ function ChatPage() {
         style={styles.chatWindow}
       >
         <div className="text-center mb-auto" style={styles.welcomeContainer}>
-          
-          {selectedConversation || loading ? null : (<><img
-            src={chatLogo}
-            alt="Chat Logo"
-            className="mb-4"
-            style={styles.chatLogo}
-          />
-          <h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
-            Hello, {userName ? userName : "Guest"}✨
-          </h2>
-          <p className="fs-5" style={styles.subMessage}>
-            Enter your bet details below:
-          </p></>)}
+          {selectedConversation || loading ? null : (
+            <>
+              <img
+                src={chatLogo}
+                alt="Chat Logo"
+                className="mb-4"
+                style={styles.chatLogo}
+              />
+              <h2 className="fs-3 mb-2" style={styles.welcomeMessage}>
+                Hello, {userName ? userName : "Guest"}✨
+              </h2>
+              <p className="fs-5" style={styles.subMessage}>
+                Enter your bet details below:
+              </p>
+            </>
+          )}
         </div>
 
         {loading ? (
@@ -633,8 +689,7 @@ function ChatPage() {
         ) : selectedConversation && selectedConversation.analysis ? (
           <div className="mb-8" style={{ width: "100%" }}>
             <h3>{selectedConversation.conversationName}</h3>
-            <div className="response-text">
-            </div>
+            <div className="response-text"></div>
 
             <div
               className="chat-messages-container py-5"
@@ -642,7 +697,7 @@ function ChatPage() {
             >
               {messages.map((msg, index) => (
                 <div
-                className="px-2"
+                  className="px-2"
                   key={index}
                   style={{
                     textAlign: msg.role === "user" ? "right" : "left",
@@ -651,7 +706,8 @@ function ChatPage() {
                 >
                   <span
                     style={{
-                      backgroundColor: msg.role === "user" ? "rgb(50,50,50)" : "",
+                      backgroundColor:
+                        msg.role === "user" ? "rgb(50,50,50)" : "",
                       color: "#fff",
                       padding: "8px",
                       borderRadius: "8px",
@@ -678,8 +734,10 @@ function ChatPage() {
             </div>
 
             {/* Chat Input Field */}
-            <div className="position-fixed bottom-0 start-50 translate-middle-x w-100 px-3 pb-4"
-             style={styles.chatInput}>
+            <div
+              className="position-fixed bottom-0 start-50 translate-middle-x w-100 px-3 pb-4"
+              style={styles.chatInput}
+            >
               <input
                 type="text"
                 value={newMessage}
@@ -711,6 +769,34 @@ function ChatPage() {
                   <option value="MLB">MLB</option>
                   <option value="NHL">NHL</option>
                 </select>
+
+                {/* Schedule Display */}
+                {league && (
+                  <div
+                    className="schedule-container"
+                    style={{
+                      marginTop: "20px",
+                      padding: "10px",
+                      backgroundColor: "#1c2639",
+                      color: "white",
+                      borderRadius: "8px",
+                    }}
+                  >
+                    <h3>Today's Schedule for {league}</h3>
+                    {schedule.length > 0 ? (
+                      <ul>
+                        {schedule.map((game, index) => (
+                          <li key={index}>
+                            {game.HomeTeam} vs {game.AwayTeam} at{" "}
+                            {new Date(game.DateTime).toLocaleTimeString()}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No games scheduled for today.</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Selected Team Dropdowns */}
                 {league && (
