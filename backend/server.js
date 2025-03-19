@@ -400,6 +400,57 @@ app.delete("/deleteConversations", authenticateToken, async (req, res) => {
   }
 });
 
+// Map leagues to SportsData.io endpoints
+const LEAGUE_ENDPOINTS = {
+  NBA: "https://api.sportsdata.io/v3/nba/scores/json/GamesByDate",
+  NFL: "https://api.sportsdata.io/v3/nfl/scores/json/GamesByDate",
+  MLB: "https://api.sportsdata.io/v3/mlb/scores/json/GamesByDate",
+  NHL: "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate",
+};
+
+// Get today's date in `YYYY-MMM-DD` format (e.g., 2025-MAR-19)
+const getFormattedDate = () => {
+  const today = new Date();
+  const monthAbbr = today
+    .toLocaleString("en-US", { month: "short" })
+    .toUpperCase();
+  return `${today.getFullYear()}-${monthAbbr}-${String(
+    today.getDate()
+  ).padStart(2, "0")}`;
+};
+
+app.get("/schedule", async (req, res) => {
+  const { league } = req.query;
+  if (!league || !LEAGUE_ENDPOINTS[league.toUpperCase()]) {
+    return res.status(400).json({ error: "Invalid or missing league" });
+  }
+
+  try {
+    const apiUrl = `${
+      LEAGUE_ENDPOINTS[league.toUpperCase()]
+    }/${getFormattedDate()}`;
+    console.log("Fetching from:", apiUrl);
+
+    const response = await axios.get(apiUrl, {
+      headers: { "Ocp-Apim-Subscription-Key": config.SPORTS_DATA_API_KEY },
+    });
+
+    res.json({ games: response.data });
+  } catch (error) {
+    console.error(
+      "Error fetching schedule:",
+      error?.response?.status,
+      error?.response?.data
+    );
+
+    res.status(500).json({
+      error: "Failed to fetch schedule",
+      status: error?.response?.status || "Unknown",
+      details: error?.response?.data || "No response from API",
+    });
+  }
+});
+
 // This is a "Catch all route" - Handle any unknown routes (React routes)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "build", "index.html"));
