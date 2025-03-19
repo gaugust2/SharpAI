@@ -1,11 +1,11 @@
-name: Deploy Backend
+name: Deploy Backend to EC2
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'backend/**'  # Trigger only when backend files change
+      - 'backend/**'
 
 jobs:
   deploy:
@@ -14,20 +14,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Configure AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region us-east-2  
+
       - name: Start EC2 instance
+        run: |
+          aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+          echo "Waiting for instance to start..."
+          aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+          echo "Instance started successfully."
+
+      - name: Get EC2 Public IP
+        id: get-ip
+        run: |
+          PUBLIC_IP=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }} --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
+          echo "Public IP: $PUBLIC_IP"
+          echo "::set-output name=public_ip::$PUBLIC_IP"
+
+      - name: Test SSH Connection
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_PUBLIC_IP }}
+          host: ${{ steps.get-ip.outputs.public_ip }}
           username: ec2-user
           key: ${{ secrets.EC2_KEY_PAIR }}
           script: |
-            sudo aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-            sleep 60 # Wait for instance to start
+            echo "SSH connection successful!"
 
       - name: Deploy backend to EC2
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.EC2_PUBLIC_IP }}
+          host: ${{ steps.get-ip.outputs.public_ip }}
           username: ec2-user
           key: ${{ secrets.EC2_KEY_PAIR }}
           script: |
@@ -38,10 +59,5 @@ jobs:
             pm2 restart backend
 
       - name: Stop EC2 instance
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.EC2_PUBLIC_IP }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY_PAIR }}
-          script: |
-            sudo aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+        run: |
+          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
