@@ -87,7 +87,7 @@ function ChatPage() {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/schedule?league=${selectedLeague}`
+        `${process.env.REACT_APP_BACKEND_URL}:3000/schedule?league=${selectedLeague}`
       );
 
       if (!response.ok) {
@@ -106,12 +106,15 @@ function ChatPage() {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversationNames`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/conversationNames`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch conversations.");
@@ -231,13 +234,16 @@ function ChatPage() {
 
   const handleSelectConversation = async (conversationID) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversation`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "conversation-id": conversationID,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/conversation`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "conversation-id": conversationID,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch conversation details.");
@@ -294,13 +300,16 @@ function ChatPage() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/betslip`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/betslip`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -391,15 +400,18 @@ function ChatPage() {
         );
       }
 
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "conversation-id": conversationID,
-        },
-        body: JSON.stringify({ message: messageToSend }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/chat`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "conversation-id": conversationID,
+          },
+          body: JSON.stringify({ message: messageToSend }),
+        }
+      );
 
       // Log the raw response for debugging
       const rawResponse = await response.text();
@@ -465,13 +477,16 @@ function ChatPage() {
 
       console.log("Refreshing conversation data for ID:", conversationID);
 
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/conversation`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "conversation-id": conversationID,
-        },
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/conversation`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "conversation-id": conversationID,
+          },
+        }
+      );
 
       if (!response.ok) {
         console.error("Failed to refresh conversation:", response.status);
