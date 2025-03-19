@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'sharpai-ui/**' # Trigger only when frontend files change
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -21,7 +22,7 @@ jobs:
 
       - name: Inject API URL for Production
         run: |
-          echo "REACT_APP_BACKEND_URL=${{ secrets.EC2_PUBLIC_IP }}" > sharpai-ui/.env
+          echo "REACT_APP_BACKEND_URL=http://${{ secrets.EC2_PUBLIC_IP }}" > sharpai-ui/.env
 
       - name: Build frontend
         run: |
