@@ -147,6 +147,25 @@ app.post("/login", async (req, res) => {
   }
 });
 
+app.delete("/deleteUser", authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Delete user
+    const deletedUser = await User.findByIdAndDelete(req.user.id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Step 2: Success Resposen
+    res.status(200).json({ message: `User '${deletedUser.email}' deleted successfully` });
+  } catch (error) {
+    console.error("Error in /betslip:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to process betslip: ${error.message}` });
+  }
+});
+
 app.delete(
   "/deleteConversation/:conversationID",
   authenticateToken,
