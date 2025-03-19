@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'sharpai-ui/**' # Trigger only when frontend files change
+  workflow_dispatch:
 
 jobs:
   deploy:
