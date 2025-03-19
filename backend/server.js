@@ -156,13 +156,13 @@ app.delete("/deleteUser", authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Step 2: Success Resposen
+    // Step 2: Success Response
     res.status(200).json({ message: `User '${deletedUser.email}' deleted successfully` });
   } catch (error) {
-    console.error("Error in /betslip:", error.message);
+    console.error("Error in /deleteUser:", error.message);
     res
       .status(500)
-      .json({ message: `Failed to process betslip: ${error.message}` });
+      .json({ message: `Failed to delete user: ${error.message}` });
   }
 });
 
@@ -397,9 +397,9 @@ app.get("/conversation", authenticateToken, async (req, res) => {
     // Step 3: Respond with the analysis and array of messages
     res.json({ conversation });
   } catch (error) {
-    console.error("Error in /conversationNames:", error.message);
+    console.error("Error in /conversation:", error.message);
     res.status(500).json({
-      message: `Failed to return conversation names: ${error.message}`,
+      message: `Failed to return conversation: ${error.message}`,
     });
   }
 });
