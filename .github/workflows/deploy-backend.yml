@@ -5,59 +5,39 @@ on:
     branches:
       - main
     paths:
-      - 'backend/**'
+    - 'backend/**'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
 
-      - name: Configure AWS CLI
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y awscli
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws configure set region us-east-2  
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Start EC2 instance
         run: |
-          aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-          echo "Waiting for instance to start..."
-          aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
-          echo "Instance started successfully."
+          aws ec2 start-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }} --region ${{ secrets.AWS_REGION }}
+          echo "Waiting for EC2 to be running..."
+          aws ec2 wait instance-running --instance-ids ${{ secrets.EC2_INSTANCE_ID }} --region ${{ secrets.AWS_REGION }}
 
-      - name: Get EC2 Public IP
-        id: get-ip
+      - name: Add SSH key
         run: |
-          PUBLIC_IP=$(aws ec2 describe-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }} --query "Reservations[0].Instances[0].PublicIpAddress" --output text)
-          echo "Public IP: $PUBLIC_IP"
-          echo "::set-output name=public_ip::$PUBLIC_IP"
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_KEY_PAIR }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_PUBLIC_IP }} >> ~/.ssh/known_hosts
 
-      - name: Test SSH Connection
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ steps.get-ip.outputs.public_ip }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY_PAIR }}
-          script: |
-            echo "SSH connection successful!"
-
-      - name: Deploy backend to EC2
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ steps.get-ip.outputs.public_ip }}
-          username: ec2-user
-          key: ${{ secrets.EC2_KEY_PAIR }}
-          script: |
-            cd /home/ec2-user/SharpAI
-            git pull origin main
-            cd backend
-            npm install
-            pm2 restart backend
-
-      - name: Stop EC2 instance
+      - name: Deploy to EC2
         run: |
-          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }}
+          ssh ec2-user@${{ secrets.EC2_PUBLIC_IP }}
+          cd /home/ec2-user/SharpAI
+          git pull origin main
+          cd backend
+          npm install
+          pm2 restart backend
+
+      - name: Stop EC2 instance (optional)
+        if: always()
+        run: |
+          aws ec2 stop-instances --instance-ids ${{ secrets.EC2_INSTANCE_ID }} --region ${{ secrets.AWS_REGION }}

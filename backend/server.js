@@ -139,7 +139,7 @@ app.post("/login", async (req, res) => {
 
     //  login
     res.status(200).json({
-      message: "Login svsvsuccessful",
+      message: "Login svsuccessful",
       token, // Send token
     });
   } catch (error) {
