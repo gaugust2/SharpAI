@@ -3,19 +3,42 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
 function SignUp() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [bettingBudget, setBettingBudget] = useState("");
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
+  // Initialize state with localStorage values if available
+  const [email, setEmail] = useState(localStorage.getItem("email") || "");
+  const [password, setPassword] = useState(
+    localStorage.getItem("password") || ""
+  );
+  const [confirmPassword, setConfirmPassword] = useState(
+    localStorage.getItem("confirmPassword") || ""
+  );
+  const [firstName, setFirstName] = useState(
+    localStorage.getItem("firstName") || ""
+  );
+  const [bettingBudget, setBettingBudget] = useState(
+    localStorage.getItem("bettingBudget") || ""
+  );
+  const [termsAccepted, setTermsAccepted] = useState(
+    localStorage.getItem("tosAccepted") === "true"
+  );
+
   useEffect(() => {
-    // Check local storage for ToS acceptance
-    const tosStatus = localStorage.getItem("tosAccepted") === "true";
-    setTermsAccepted(tosStatus);
-  }, []);
+    // Store inputs in localStorage whenever they change
+    localStorage.setItem("email", email);
+    localStorage.setItem("password", password);
+    localStorage.setItem("confirmPassword", confirmPassword);
+    localStorage.setItem("firstName", firstName);
+    localStorage.setItem("bettingBudget", bettingBudget);
+    localStorage.setItem("tosAccepted", termsAccepted);
+  }, [
+    email,
+    password,
+    confirmPassword,
+    firstName,
+    bettingBudget,
+    termsAccepted,
+  ]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,18 +60,21 @@ function SignUp() {
     }
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}:3000/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName,
-          email,
-          password,
-          bettingBudget: parseInt(bettingBudget, 10),
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_BACKEND_URL}:3000/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            firstName,
+            email,
+            password,
+            bettingBudget: parseInt(bettingBudget, 10),
+          }),
+        }
+      );
 
       const data = await response.json();
 
@@ -58,9 +84,14 @@ function SignUp() {
           title: "Success!",
           text: data.message,
         });
-        localStorage.setItem("token", data.token); // Save token locally
-        navigate("/chat"); // Navigate to chat
-        localStorage.removeItem("tosAccepted"); // Clear ToS status
+        localStorage.setItem("token", data.token);
+        localStorage.removeItem("tosAccepted");
+        localStorage.removeItem("email");
+        localStorage.removeItem("password");
+        localStorage.removeItem("confirmPassword");
+        localStorage.removeItem("firstName");
+        localStorage.removeItem("bettingBudget");
+        navigate("/chat");
       } else {
         Swal.fire({
           icon: "error",
@@ -161,7 +192,18 @@ function SignUp() {
           />
           <span style={styles.checkboxText}>
             I accept SharpAI{" "}
-            <a onClick={() => navigate("/terms")} style={styles.link}>
+            <a
+              onClick={() => {
+                localStorage.setItem("email", email);
+                localStorage.setItem("password", password);
+                localStorage.setItem("confirmPassword", confirmPassword);
+                localStorage.setItem("firstName", firstName);
+                localStorage.setItem("bettingBudget", bettingBudget);
+                localStorage.setItem("tosAccepted", termsAccepted);
+                navigate("/terms");
+              }}
+              style={styles.link}
+            >
               Terms & Conditions
             </a>
           </span>

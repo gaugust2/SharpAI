@@ -147,6 +147,25 @@ app.post("/login", async (req, res) => {
   }
 });
 
+app.delete("/deleteUser", authenticateToken, async (req, res) => {
+  try {
+    // Step 1: Delete user
+    const deletedUser = await User.findByIdAndDelete(req.user.id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Step 2: Success Response
+    res.status(200).json({ message: `User '${deletedUser.email}' deleted successfully` });
+  } catch (error) {
+    console.error("Error in /deleteUser:", error.message);
+    res
+      .status(500)
+      .json({ message: `Failed to delete user: ${error.message}` });
+  }
+});
+
 app.delete(
   "/deleteConversation/:conversationID",
   authenticateToken,
@@ -378,9 +397,9 @@ app.get("/conversation", authenticateToken, async (req, res) => {
     // Step 3: Respond with the analysis and array of messages
     res.json({ conversation });
   } catch (error) {
-    console.error("Error in /conversationNames:", error.message);
+    console.error("Error in /conversation:", error.message);
     res.status(500).json({
-      message: `Failed to return conversation names: ${error.message}`,
+      message: `Failed to return conversation: ${error.message}`,
     });
   }
 });
@@ -405,7 +424,6 @@ const LEAGUE_ENDPOINTS = {
   NBA: "https://api.sportsdata.io/v3/nba/scores/json/GamesByDate",
   NFL: "https://api.sportsdata.io/v3/nfl/scores/json/GamesByDate",
   MLB: "https://api.sportsdata.io/v3/mlb/scores/json/GamesByDate",
-  NHL: "https://api.sportsdata.io/v3/nhl/scores/json/GamesByDate",
 };
 
 // Get today's date in `YYYY-MMM-DD` format (e.g., 2025-MAR-19)
